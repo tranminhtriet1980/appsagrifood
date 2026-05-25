@@ -365,16 +365,44 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
   const handleCheckIn = async () => {
     setIsCheckingIn(true);
     
+    // 1. Capture ảnh từ video feed
+    let base64Image = '';
+    if (videoRef.current) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth || 720;
+      canvas.height = videoRef.current.videoHeight || 1280;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+         // Chụp ảnh (Cần lật ngược lại hình vì video đang bị lật mirror)
+         ctx.translate(canvas.width, 0);
+         ctx.scale(-1, 1);
+         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+         base64Image = canvas.toDataURL("image/jpeg", 0.7);
+      }
+    }
+    
     // Sử dụng giờ hệ thống chuẩn làm timestamp
     const trueTimestamp = getTrueTime().toISOString();
     
     const checkinData = {
+      id: Date.now().toString(),
       userId: user?.id || 'staff',
+      userName: user?.name || 'Nhân viên',
+      location: 'Văn phòng Bitexco',
       timestamp: trueTimestamp,
       type: 'check-in',
-      imageBase64: 'data:image/jpeg;base64,...', // Fake base64 for demo
-      status: 'pending'
+      imageBase64: base64Image || 'data:image/jpeg;base64,...',
+      status: isOffline ? 'pending' : 'success'
     };
+
+    // 2. LƯU LỊCH SỬ CHẤM CÔNG VÀO LOCALSTORAGE
+    try {
+      const existingLogs = JSON.parse(localStorage.getItem('attendance_logs') || '[]');
+      existingLogs.unshift(checkinData);
+      localStorage.setItem('attendance_logs', JSON.stringify(existingLogs));
+    } catch (e) {
+      console.error("Lỗi lưu localStorage", e);
+    }
 
     if (isOffline) {
       // Lưu vào IndexedDB
@@ -392,7 +420,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
       setTimeout(() => {
         setIsCheckingIn(false);
         setShowSuccess(true);
-      }, 1800);
+      }, 1500);
     }
   };
 
@@ -488,7 +516,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             />
           </div>
           {/* Floating ID Box */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-48 h-48 border-2 border-primary/50 rounded-xl flex items-center justify-center bg-primary/5">
               <span className="material-symbols-outlined text-primary text-5xl opacity-40">face</span>
             </div>
@@ -502,6 +530,23 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             <span className="material-symbols-outlined text-status-success" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
           </div>
         </section>
+
+        {/* Nút chụp ngay dưới Camera */}
+        <button 
+          onClick={handleCheckIn}
+          disabled={isCheckingIn}
+          className="mt-6 w-16 h-16 rounded-full bg-primary flex items-center justify-center border-4 border-primary/30 shadow-[0_0_20px_rgba(192,193,255,0.4)] active:scale-90 transition-all disabled:opacity-50"
+        >
+           {isCheckingIn ? (
+              <svg className="animate-spin h-6 w-6 text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+           ) : (
+              <span className="material-symbols-outlined text-[32px] text-on-primary">photo_camera</span>
+           )}
+        </button>
+        <span className="text-[12px] text-on-surface-variant mt-2 font-bold uppercase tracking-widest">Bấm để chấm công</span>
 
         {/* Location & Meta Section */}
         <section className="w-full mt-8 space-y-4 max-w-[500px]">
@@ -530,29 +575,8 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
           </div>
         </section>
 
-        {/* Main Action Button */}
+        {/* Main Action Button (Removed duplicate button, kept bottom links) */}
         <section className="fixed bottom-10 left-6 right-6 flex flex-col gap-4 max-w-[500px] mx-auto z-40">
-          <button 
-            className="w-full bg-primary py-5 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-all glow-pulse disabled:opacity-70 disabled:cursor-not-allowed disabled:animate-none" 
-            onClick={handleCheckIn}
-            disabled={isCheckingIn}
-          >
-            {isCheckingIn ? (
-              <>
-                <svg className="animate-spin h-6 w-6 text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-on-primary text-[24px] font-bold">Đang xử lý...</span>
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-on-primary text-3xl">fingerprint</span>
-                <span className="text-on-primary text-[24px] font-bold">Xác nhận Check-in</span>
-              </>
-            )}
-          </button>
-          
           <button className="w-full py-4 rounded-full border border-outline-variant flex items-center justify-center gap-2 text-on-surface-variant hover:bg-surface-container transition-colors bg-background/80 backdrop-blur-md">
             <span className="material-symbols-outlined text-[20px]">edit_note</span>
             <span className="text-[16px]">Ghi chú hoặc Đính kèm hình ảnh</span>
