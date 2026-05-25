@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import BottomNav from "@/components/BottomNav";
@@ -273,8 +273,46 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
   // Custom hook đồng bộ thời gian máy chủ chống gian lận
   const { getTrueTime } = useTrueTime();
+
+  // Khởi tạo Camera
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err: any) {
+        console.error("Lỗi khởi tạo camera:", err);
+        toast.error("Không thể truy cập Camera. Vui lòng cấp quyền cho trình duyệt!", {
+          duration: 4000,
+          style: { background: '#ef4444', color: '#fff' }
+        });
+      }
+    };
+    
+    startCamera();
+    
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   // Cập nhật Live Clock
   useEffect(() => {
@@ -436,18 +474,18 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
           </p>
         </section>
 
-        {/* Biometric / Scanner Preview Area (Placeholder) */}
+        {/* Biometric / Scanner Preview Area */}
         <section className="relative w-full aspect-square max-w-[320px] bg-surface-container rounded-xl overflow-hidden border border-outline-variant group">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="scan-line"></div>
-            {/* Simulating Camera Feed */}
-            <div className="w-full h-full bg-surface-container-high opacity-40">
-              <img 
-                alt="Biometric authentication background" 
-                className="w-full h-full object-cover grayscale" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuACoJ4EGhQnhyZoaVk6LPyJdndq8I7-8YZb62TBZoDYZMLugAxP3I-WkCyK0TMV-tCurEeFhkzgEv6M6XHSbLfOdcfGorLwTm_gSujGXp821IcVnWNPWObaUef4ik6psU-Qs-vdQYT4fy0-5zxPeTaJaiv_m68T42kWs9fziHHO-cMGczmGOGGM4cmvAdQstisMb7uyTh0kFvQLRtBDmW9Ic6Snm-6plL0Smq_wR6wJbNoQ8Gn5hw3KjHxlXiAc9KkKRtxil27VYcUX"
-              />
-            </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <div className="scan-line z-10"></div>
+            {/* Camera Feed */}
+            <video 
+              ref={videoRef}
+              autoPlay 
+              playsInline 
+              muted 
+              className="w-full h-full object-cover transform scale-x-[-1]"
+            />
           </div>
           {/* Floating ID Box */}
           <div className="absolute inset-0 flex items-center justify-center">
