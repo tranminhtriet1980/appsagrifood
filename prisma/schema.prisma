@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(255)
+  role_id        String           @db.VarChar(255)
+  manager_id     Int?
+  join_date      DateTime         @db.Date
+  face_data      String?          @db.Text
+  
+  // Relations
+  attendances    Attendance[]
+  leave_balances LeaveBalance[]
+  leave_requests LeaveRequest[]
+  audit_logs     AuditLog[]
+  
+  manager        User?            @relation("UserManager", fields: [manager_id], references: [id])
+  subordinates   User[]           @relation("UserManager")
+  
+  approved_leaves LeaveRequest[]  @relation("Approver")
+
+  @@map("users")
+}
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  radius    Int      @default(50)
+
+  @@map("locations")
+}
+
+model Shift {
+  id         Int          @id @default(autoincrement())
+  shift_name String       @db.VarChar(255)
+  start_time DateTime     @db.Time()
+  end_time   DateTime     @db.Time()
+  
+  // Relations
+  attendances Attendance[]
+
+  @@map("shifts")
+}
+
+model Attendance {
+  id               Int       @id @default(autoincrement())
+  user_id          Int
+  shift_id         Int
+  work_date        DateTime  @db.Date
+  check_in_actual  DateTime? @db.Timestamp()
+  check_out_actual DateTime? @db.Timestamp()
+  status           String    @db.VarChar(50)
+  
+  user             User      @relation(fields: [user_id], references: [id])
+  shift            Shift     @relation(fields: [shift_id], references: [id])
+
+  @@map("attendance")
+}
+
+model LeaveBalance {
+  user_id    Int
+  year       Int
+  total_days Decimal @db.Decimal(5, 2)
+  used_days  Decimal @db.Decimal(5, 2)
+  
+  user       User    @relation(fields: [user_id], references: [id])
+
+  @@id([user_id, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  type           String   @db.VarChar(50)
+  leave_duration Decimal  @db.Decimal(5, 2)
+  start_date     DateTime @db.Date
+  end_date       DateTime @db.Date
+  status         String   @db.VarChar(50)
+  approver_id    Int?
+  
+  user           User     @relation(fields: [user_id], references: [id])
+  approver       User?    @relation("Approver", fields: [approver_id], references: [id])
+
+  @@map("leave_requests")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  action     String   @db.Text
+  user_id    Int?
+  created_at DateTime @default(now()) @db.Timestamp()
+  
+  user       User?    @relation(fields: [user_id], references: [id])
+
+  @@map("audit_logs")
+}
