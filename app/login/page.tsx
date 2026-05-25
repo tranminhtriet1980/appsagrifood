@@ -35,11 +35,14 @@ export default function LoginPage() {
       }
 
       // 2. Cập nhật thông tin User vào Zustand Global State (Lưu ở Frontend)
+      // Hàm login trong store đã tự động xử lý lưu localStorage/Cookie cho userRole
       login(data.user);
       
-      // 3. Chuyển hướng người dùng vào giao diện Dashboard sau khi đăng nhập thành công
+      // 3. Chuyển hướng người dùng vào giao diện tương ứng theo Role
       if (data.user.role === 'admin' || data.user.role === 'admin_company') {
         router.push("/admin/dashboard");
+      } else if (data.user.role === 'manager') {
+        router.push("/manager/dashboard");
       } else {
         router.push("/dashboard");
       }
