@@ -32,7 +32,8 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         // Clean State khi đăng xuất
         if (typeof window !== "undefined") {
-          localStorage.clear(); // Xóa sạch toàn bộ bộ nhớ tạm
+          localStorage.removeItem("auth-storage");
+          localStorage.removeItem("userRole");
           sessionStorage.clear(); // Xóa sạch phiên làm việc
           
           document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";

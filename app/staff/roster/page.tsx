@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useRosterStore } from '@/store/useRosterStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // --- MOCK DATA ---
 const WEEK_DAYS = [
@@ -30,9 +31,10 @@ const COWORKERS = [
 export default function StaffRosterMatrixPage() {
   const router = useRouter();
   const { globalShifts, offDayRequests, requestOffDay } = useRosterStore();
+  const user = useAuthStore((state) => state.user);
   
-  // Fake logged in user is s1 (Nguyễn Văn A)
-  const myStaffId = 's1';
+  // Resolve logged in user ID dynamically to match Manager's STAFF_LIST
+  const myStaffId = user?.id ? (user.id.toString().startsWith('s') ? user.id.toString() : `s${user.id}`) : 's1';
   
   // Convert Manager's matrix format to Staff view format
   const getStaffMatrixData = () => {

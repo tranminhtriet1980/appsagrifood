@@ -105,7 +105,7 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-      
+
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#0b1326]/90 backdrop-blur-md border-b border-white/5 px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -139,11 +139,10 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as TabType)}
-              className={`flex-1 py-2 rounded-lg font-bold text-[13px] transition-all ${
-                activeTab === tab
-                  ? "bg-primary text-on-primary shadow-lg"
-                  : "text-on-surface-variant hover:text-white"
-              }`}
+              className={`flex-1 py-2 rounded-lg font-bold text-[13px] transition-all ${activeTab === tab
+                ? "bg-primary text-on-primary shadow-lg"
+                : "text-on-surface-variant hover:text-white"
+                }`}
             >
               {tab}
             </button>
@@ -272,16 +271,16 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   // Custom hook đồng bộ thời gian máy chủ chống gian lận
   const { getTrueTime } = useTrueTime();
 
   // Khởi tạo Camera
   useEffect(() => {
     let stream: MediaStream | null = null;
-    
+
     const startCamera = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -292,7 +291,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
           },
           audio: false
         });
-        
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -304,9 +303,9 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
         });
       }
     };
-    
+
     startCamera();
-    
+
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -351,7 +350,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
         console.error("Lỗi đọc IndexedDB", e);
       }
     };
-    
+
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
 
@@ -364,7 +363,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true);
-    
+
     // 1. Capture ảnh từ video feed
     let base64Image = '';
     if (videoRef.current) {
@@ -373,17 +372,17 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
       canvas.height = videoRef.current.videoHeight || 1280;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-         // Chụp ảnh (Cần lật ngược lại hình vì video đang bị lật mirror)
-         ctx.translate(canvas.width, 0);
-         ctx.scale(-1, 1);
-         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-         base64Image = canvas.toDataURL("image/jpeg", 0.7);
+        // Chụp ảnh (Cần lật ngược lại hình vì video đang bị lật mirror)
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        base64Image = canvas.toDataURL("image/jpeg", 0.7);
       }
     }
-    
+
     // Sử dụng giờ hệ thống chuẩn làm timestamp
     const trueTimestamp = getTrueTime().toISOString();
-    
+
     const checkinData = {
       id: Date.now().toString(),
       userId: user?.id || 'staff',
@@ -456,7 +455,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             100% { top: 100%; }
         }
       `}</style>
-      
+
       {/* Top Navigation */}
       <header className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-50 bg-background/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -507,11 +506,11 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
           <div className="absolute inset-0 flex items-center justify-center bg-black">
             <div className="scan-line z-10"></div>
             {/* Camera Feed */}
-            <video 
+            <video
               ref={videoRef}
-              autoPlay 
-              playsInline 
-              muted 
+              autoPlay
+              playsInline
+              muted
               className="w-full h-full object-cover transform scale-x-[-1]"
             />
           </div>
@@ -532,19 +531,19 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
         </section>
 
         {/* Nút chụp ngay dưới Camera */}
-        <button 
+        <button
           onClick={handleCheckIn}
           disabled={isCheckingIn}
           className="mt-6 w-16 h-16 rounded-full bg-primary flex items-center justify-center border-4 border-primary/30 shadow-[0_0_20px_rgba(192,193,255,0.4)] active:scale-90 transition-all disabled:opacity-50"
         >
-           {isCheckingIn ? (
-              <svg className="animate-spin h-6 w-6 text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-           ) : (
-              <span className="material-symbols-outlined text-[32px] text-on-primary">photo_camera</span>
-           )}
+          {isCheckingIn ? (
+            <svg className="animate-spin h-6 w-6 text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <span className="material-symbols-outlined text-[32px] text-on-primary">photo_camera</span>
+          )}
         </button>
         <span className="text-[12px] text-on-surface-variant mt-2 font-bold uppercase tracking-widest">Bấm để chấm công</span>
 
@@ -552,7 +551,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
         <section className="w-full mt-8 space-y-4 max-w-[500px]">
           <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant flex items-center gap-4">
             <div className="w-12 h-12 bg-primary-container/20 rounded-full flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-primary">location_on</span>
+              <span className="material-symbols-outlined text-primary">location_on</span>
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-[12px] font-medium text-on-surface-variant">Vị trí hiện tại</h3>
@@ -562,7 +561,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
               <span className="text-[12px] font-medium text-status-success bg-status-success/10 px-2 py-1 rounded">Trong vùng</span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
               <h3 className="text-[12px] font-medium text-on-surface-variant mb-1">Ca làm việc</h3>
@@ -582,7 +581,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             <span className="text-[16px]">Ghi chú hoặc Đính kèm hình ảnh</span>
           </button>
 
-          <button 
+          <button
             onClick={() => router.push('/history')}
             className="w-full mt-2 text-primary text-[14px] font-medium flex items-center justify-center gap-1 hover:underline"
           >
@@ -603,8 +602,8 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             <p className="text-[16px] text-on-surface-variant mb-10 max-w-xs leading-relaxed">
               Bạn đã hoàn tất Check-in vào lúc <span className="font-bold text-on-surface">{timeStr}</span> tại Văn phòng Bitexco.
             </p>
-            <button 
-              className="px-10 py-3 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold rounded-full transition-colors" 
+            <button
+              className="px-10 py-3 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold rounded-full transition-colors"
               onClick={handleReset}
             >
               Quay lại trang chủ

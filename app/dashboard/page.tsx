@@ -285,17 +285,17 @@ export default function DashboardPage() {
 
           {/* Quick Action Grid */}
           <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-sm">
-            <button onClick={() => router.push('/payroll')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
-              <span className="material-symbols-outlined">description</span>
-              <span className="font-label-sm">Phiếu lương</span>
+            <button onClick={() => router.push('/history')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
+              <span className="material-symbols-outlined">history</span>
+              <span className="font-label-sm">Lịch sử công</span>
             </button>
             <button onClick={() => router.push('/leaves')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
-              <span className="material-symbols-outlined">history_edu</span>
-              <span className="font-label-sm">Lịch sử phép</span>
+              <span className="material-symbols-outlined">event_busy</span>
+              <span className="font-label-sm">Nghỉ phép</span>
             </button>
-            <button onClick={() => router.push('/insurance')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
-              <span className="material-symbols-outlined">medical_services</span>
-              <span className="font-label-sm">Bảo hiểm</span>
+            <button onClick={() => router.push('/overtime')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
+              <span className="material-symbols-outlined">more_time</span>
+              <span className="font-label-sm">Tăng ca</span>
             </button>
             <button onClick={() => router.push('/notifications')} className="bg-surface-container-high hover:bg-primary hover:text-on-primary p-md rounded-xl border border-surface-container-highest transition-all flex flex-col items-center gap-sm">
               <span className="material-symbols-outlined">campaign</span>

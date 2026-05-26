@@ -7,7 +7,7 @@ const secretKey = new TextEncoder().encode(
 );
 
 // Danh sách các route yêu cầu người dùng phải đăng nhập mới được vào
-const protectedRoutes = ['/dashboard', '/attendance', '/leaves', '/approvals', '/admin', '/manager'];
+const protectedRoutes = ['/dashboard', '/attendance', '/leaves', '/approvals', '/admin', '/manager', '/notifications', '/history', '/overtime', '/staff', '/employees', '/reports', '/roster', '/settings'];
 
 export async function middleware(request: NextRequest) {
   // Lấy giá trị cookie auth_token (JWT)
@@ -54,11 +54,12 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
-      // 5. Chặn Manager truy cập vào các route của nhân viên
-      const staffOnlyRoutes = ['/leaves', '/history', '/overtime', '/roster'];
-      const isStaffRoute = staffOnlyRoutes.some(r => pathname.startsWith(r));
+      // 5. Chặn Manager truy cập vào các route chỉ dành cho staff (trừ /roster - smart redirect)
+      // Manager có thể vào /roster vì nó sẽ tự redirect đến /manager/roster
+      const staffOnlyRoutes = ['/leaves', '/history', '/overtime', '/staff'];
+      const isStaffOnlyRoute = staffOnlyRoutes.some(r => pathname.startsWith(r));
       
-      if (isManager && isStaffRoute) {
+      if (isManager && isStaffOnlyRoute) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
       

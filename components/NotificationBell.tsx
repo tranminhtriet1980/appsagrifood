@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
 
 export default function NotificationBell() {
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotificationStore();
   const user = useAuthStore(state => state.user);
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -14,9 +16,16 @@ export default function NotificationBell() {
   const isManager = user?.role && ["manager", "director", "admin"].includes(user.role);
   const userRoleStr = isManager ? "manager" : "staff";
   
-  const relevantNotifications = notifications.filter(
-    n => n.targetRole === "all" || n.targetRole === userRoleStr || (n.targetUserId && n.targetUserId === user?.id?.toString())
-  );
+  const relevantNotifications = notifications.filter(n => {
+    if (n.targetRole === "all") return true;
+    if (n.targetUserId) {
+      const match1 = n.targetUserId === user?.id?.toString();
+      const match2 = n.targetUserId === `s${user?.id}`;
+      const match3 = `s${n.targetUserId}` === user?.id?.toString();
+      return match1 || match2 || match3;
+    }
+    return n.targetRole === userRoleStr;
+  });
   
   const relevantUnreadCount = relevantNotifications.filter(n => !n.isRead).length;
 
@@ -89,6 +98,15 @@ export default function NotificationBell() {
               ))
             )}
           </div>
+          
+          {/* View All Link */}
+          <button 
+            onClick={() => { setIsOpen(false); router.push('/notifications'); }}
+            className="w-full p-3 text-center text-sm font-bold text-primary hover:bg-surface-container-high transition-colors border-t border-surface-container-highest flex items-center justify-center gap-1"
+          >
+            Xem tất cả thông báo
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
         </div>
       )}
     </div>

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import { showToast } from "@/components/GlobalToast";
 
 export default function OvertimePage() {
   const user = useAuthStore((state) => state.user);
@@ -29,6 +31,8 @@ export default function OvertimePage() {
     setDate(today);
   }, []);
 
+  const addNotification = useNotificationStore((state) => state.addNotification);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -36,6 +40,17 @@ export default function OvertimePage() {
     setTimeout(() => {
       setShowSuccess(true);
       setIsSubmitting(false);
+
+      // Notify Manager
+      const typeLabel = requestType === 'ot' ? 'Tăng ca tại văn phòng' : 'Công tác ngoài thị trường';
+      addNotification({
+        senderName: user?.name || 'Nhân viên',
+        title: 'Đơn đăng ký mới',
+        message: `📝 ${user?.name || 'Nhân viên'} vừa gửi yêu cầu ${typeLabel} ngày ${date} (${startTime} - ${endTime})`,
+        time: 'Vừa xong',
+        targetRole: 'manager'
+      });
+      showToast("✅ Gửi yêu cầu thành công. Quản lý đã được thông báo.", "success");
       
       // Reset form
       setStartTime("");

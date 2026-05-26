@@ -70,11 +70,13 @@ export const useRosterStore = create<RosterState>()(
             return s;
           });
           
+          const finalShifts = [...newShifts];
           Object.entries(state.offDayRequests).forEach(([staffId, date]) => {
-            const existing = newShifts.find(s => s.userId === staffId && s.date === date);
-            if (existing) {
-              existing.shiftType = 'OFF';
-              existing.status = 'Published';
+            const existingIdx = finalShifts.findIndex(s => s.userId === staffId && s.date === date);
+            if (existingIdx > -1) {
+              const updatedShift = { ...finalShifts[existingIdx], shiftType: 'OFF', status: 'Published' as const };
+              finalShifts[existingIdx] = updatedShift;
+              newlyPublishedShifts.push(updatedShift);
             } else {
               const newOffShift: Shift = {
                 id: `${staffId}_${date}_off`,
@@ -84,7 +86,7 @@ export const useRosterStore = create<RosterState>()(
                 shiftType: 'OFF',
                 status: 'Published'
               };
-              newShifts.push(newOffShift);
+              finalShifts.push(newOffShift);
               newlyPublishedShifts.push(newOffShift);
             }
           });
@@ -102,7 +104,7 @@ export const useRosterStore = create<RosterState>()(
              });
           });
 
-          return { globalShifts: newShifts, offDayRequests: {} };
+          return { globalShifts: finalShifts, offDayRequests: {} };
         }),
 
       removeShift: (userId, date) =>

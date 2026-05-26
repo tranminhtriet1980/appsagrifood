@@ -177,8 +177,9 @@ export default function SettingsPage() {
             // 2. Xóa Zustand store
             logout();
             
-            // 3. Xóa sạch kho lưu trữ cục bộ
-            localStorage.clear();
+            // 3. Xóa các lưu trữ liên quan đến phiên (giữ lại app-storage để test E2E)
+            localStorage.removeItem('auth-storage');
+            localStorage.removeItem('userRole');
             sessionStorage.clear();
             
             // 4. Quét sạch mọi cookie thường để chặn middleware
