@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useNotificationStore } from './useNotificationStore';
 
 export interface Shift {
   id: string;
@@ -13,7 +14,7 @@ export interface Shift {
 interface RosterState {
   globalShifts: Shift[];
   offDayRequests: Record<string, string>; // staffId -> date
-  setShift: (userId: string, departmentId: string, date: string, shiftType: string) => void;
+  addOrUpdateShift: (params: { userId: string, departmentId: string, date: string, shiftType: string }) => void;
   requestOffDay: (staffId: string, date: string) => void;
   publishLocationShifts: (departmentId: string) => void;
   removeShift: (userId: string, date: string) => void;
@@ -35,7 +36,7 @@ export const useRosterStore = create<RosterState>()(
       globalShifts: INITIAL_SHIFTS,
       offDayRequests: {},
 
-      setShift: (userId, departmentId, date, shiftType) =>
+      addOrUpdateShift: ({ userId, departmentId, date, shiftType }) =>
         set((state) => {
           const newShifts = state.globalShifts.filter(s => !(s.userId === userId && s.date === date));
           newShifts.push({
@@ -59,9 +60,12 @@ export const useRosterStore = create<RosterState>()(
 
       publishLocationShifts: (departmentId) =>
         set((state) => {
+          const newlyPublishedShifts: Shift[] = [];
           const newShifts = state.globalShifts.map(s => {
             if (s.departmentId === departmentId && s.status === 'Draft') {
-              return { ...s, status: 'Published' as const };
+              const publishedShift = { ...s, status: 'Published' as const };
+              newlyPublishedShifts.push(publishedShift);
+              return publishedShift;
             }
             return s;
           });
@@ -72,15 +76,30 @@ export const useRosterStore = create<RosterState>()(
               existing.shiftType = 'OFF';
               existing.status = 'Published';
             } else {
-              newShifts.push({
+              const newOffShift: Shift = {
                 id: `${staffId}_${date}_off`,
                 userId: staffId,
                 departmentId,
                 date,
                 shiftType: 'OFF',
                 status: 'Published'
-              });
+              };
+              newShifts.push(newOffShift);
+              newlyPublishedShifts.push(newOffShift);
             }
+          });
+
+          // Shoot notifications
+          const notifStore = useNotificationStore.getState();
+          newlyPublishedShifts.forEach(shift => {
+             notifStore.addNotification({
+                senderName: 'Quản lý',
+                title: 'Lịch làm việc tuần mới',
+                message: `Quản lý đã công bố lịch tuần mới. Bạn có lịch vào ngày ${shift.date} (${shift.shiftType}).`,
+                time: 'Vừa xong',
+                targetRole: 'staff',
+                targetUserId: shift.userId
+             });
           });
 
           return { globalShifts: newShifts, offDayRequests: {} };

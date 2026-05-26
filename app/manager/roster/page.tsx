@@ -27,7 +27,7 @@ const STAFF_LIST = [
 
 export default function ManagerRosterPage() {
   const router = useRouter();
-  const { globalShifts, offDayRequests, setShift, publishLocationShifts, removeShift } = useRosterStore();
+  const { globalShifts, offDayRequests, addOrUpdateShift, publishLocationShifts, removeShift } = useRosterStore();
   
   const [selectedLocation, setSelectedLocation] = useState('loc1');
   
@@ -227,13 +227,22 @@ export default function ManagerRosterPage() {
 
                         {/* MENU ACTION HOVER - QUÉT NHANH */}
                         <div className="absolute inset-0 bg-surface-container/90 backdrop-blur-md rounded-xl flex-col items-center justify-center gap-1 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20 hidden group-hover/cell:flex border border-white/10">
-                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'Sáng')} className="w-[80%] py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded hover:bg-orange-500/40 transition-colors uppercase">
+                           <button onClick={() => {
+                             addOrUpdateShift({ userId: staff.id, departmentId: selectedLocation, date: day.date, shiftType: 'Sáng' });
+                             displayToast(`Đã gán Ca Sáng cho ${staff.name}`, "success");
+                           }} className="w-[80%] py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded hover:bg-orange-500/40 transition-colors uppercase">
                              Gán Sáng
                            </button>
-                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'Chiều')} className="w-[80%] py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded hover:bg-blue-500/40 transition-colors uppercase">
+                           <button onClick={() => {
+                             addOrUpdateShift({ userId: staff.id, departmentId: selectedLocation, date: day.date, shiftType: 'Chiều' });
+                             displayToast(`Đã gán Ca Chiều cho ${staff.name}`, "success");
+                           }} className="w-[80%] py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded hover:bg-blue-500/40 transition-colors uppercase">
                              Gán Chiều
                            </button>
-                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'OFF')} className="w-[80%] py-1 bg-slate-800 text-slate-300 text-[10px] font-bold rounded border border-dashed border-slate-600 hover:bg-slate-700 transition-colors uppercase mt-1">
+                           <button onClick={() => {
+                             addOrUpdateShift({ userId: staff.id, departmentId: selectedLocation, date: day.date, shiftType: 'OFF' });
+                             displayToast(`Đã gán OFF cho ${staff.name}`, "success");
+                           }} className="w-[80%] py-1 bg-slate-800 text-slate-300 text-[10px] font-bold rounded border border-dashed border-slate-600 hover:bg-slate-700 transition-colors uppercase mt-1">
                              Cho OFF
                            </button>
                            <button onClick={() => {
