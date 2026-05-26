@@ -41,8 +41,6 @@ export default function LoginPage() {
       // 3. Chuyển hướng người dùng vào giao diện tương ứng theo Role
       if (data.user.role === 'admin' || data.user.role === 'admin_company') {
         router.push("/admin/dashboard");
-      } else if (data.user.role === 'manager') {
-        router.push("/manager/dashboard");
       } else {
         router.push("/dashboard");
       }
