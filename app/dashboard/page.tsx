@@ -104,9 +104,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Widget 2: Đơn từ chờ duyệt / Cảnh báo */}
-        <div className={`bg-surface-container-high border-2 ${dashboardAlerts.length > 0 ? "border-error-container hover:border-error" : "border-surface-container-highest hover:border-primary/50"} rounded-xl p-md flex flex-col justify-between relative overflow-hidden group transition-colors cursor-pointer`} onClick={() => router.push('/approvals')}>
+        <div className={`bg-surface-container-high border-2 ${dashboardAlerts.length > 0 ? "border-error-container hover:border-error" : "border-surface-container-highest hover:border-primary/50"} rounded-xl p-md flex flex-col justify-between relative overflow-hidden group transition-colors cursor-pointer`} onClick={() => router.push('/manager/leaves-approval')}>
           <div className="z-10 flex justify-between items-start mb-sm">
-            <h4 className={`font-label-md uppercase tracking-wider font-bold ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>Cần phê duyệt gấp</h4>
+            <h4 className={`font-label-md uppercase tracking-wider font-bold ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>ĐƠN NGHỈ PHÉP</h4>
             <span className={`material-symbols-outlined ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
               {dashboardAlerts.length > 0 ? "warning" : "fact_check"}
             </span>
@@ -145,10 +145,40 @@ export default function DashboardPage() {
               <span>Quản lý nhân viên</span>
               <span className="material-symbols-outlined text-[18px]">groups</span>
             </button>
-            <button onClick={() => router.push('/history')} className="bg-surface-container-highest hover:bg-primary/20 hover:text-primary p-2 rounded-lg text-left transition-colors font-label-md flex justify-between items-center">
+            <button onClick={() => router.push('/manager/attendance-logs')} className="bg-surface-container-highest hover:bg-primary/20 hover:text-primary p-2 rounded-lg text-left transition-colors font-label-md flex justify-between items-center">
               <span>Lịch sử chấm công toàn đội</span>
               <span className="material-symbols-outlined text-[18px]">history</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter mt-lg">
+        {/* Biểu đồ Tần suất đi muộn */}
+        <div className="bg-surface-container border border-surface-container-highest rounded-xl p-md hover:bg-surface-container-high transition-colors cursor-pointer group" onClick={() => router.push('/manager/attendance-logs')}>
+          <div className="flex justify-between items-start mb-md">
+            <h4 className="font-label-md text-on-surface-variant uppercase tracking-wider font-bold">Tần suất đi muộn</h4>
+            <span className="material-symbols-outlined text-orange-500 group-hover:animate-pulse">trending_up</span>
+          </div>
+          <div className="flex items-end justify-around h-32 mt-4 pb-2 border-b border-surface-container-highest">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 bg-orange-500 rounded-t-md h-12 group-hover:h-16 transition-all duration-500"></div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 bg-orange-500 rounded-t-md h-24 group-hover:h-28 transition-all duration-500"></div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 bg-orange-500 rounded-t-md h-8 group-hover:h-12 transition-all duration-500"></div>
+            </div>
+          </div>
+          <div className="flex items-center justify-around mt-2">
+            <span className="text-xs font-bold text-on-surface-variant">Emart</span>
+            <span className="text-xs font-bold text-on-surface-variant">Lotte Q7</span>
+            <span className="text-xs font-bold text-on-surface-variant">Sagri Q1</span>
+          </div>
+          <div className="mt-4 flex justify-between items-center text-xs text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>Xem chi tiết danh sách đi muộn</span>
+            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
           </div>
         </div>
       </div>
