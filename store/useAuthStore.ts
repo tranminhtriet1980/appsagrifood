@@ -32,9 +32,14 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         // Clean State khi đăng xuất
         if (typeof window !== "undefined") {
-          localStorage.removeItem("auth-storage");
-          localStorage.removeItem("userRole");
-          document.cookie = "userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          localStorage.clear(); // Xóa sạch toàn bộ bộ nhớ tạm
+          sessionStorage.clear(); // Xóa sạch phiên làm việc
+          
+          document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          document.cookie = "userRole=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          
+          window.location.href = '/login'; // Ép trình duyệt tải lại trang đăng nhập mới tinh 100%
         }
         set({ user: null, isAuthenticated: false });
       },
