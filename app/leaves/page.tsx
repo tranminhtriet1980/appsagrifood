@@ -26,6 +26,33 @@ export default function LeavesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const [history, setHistory] = useState([
+    {
+      id: "pending-1",
+      type: "Nghỉ không lương",
+      date: "25/05/2024",
+      duration: "1 ngày",
+      status: "ĐANG CHỜ DUYỆT",
+      icon: "hourglass_empty"
+    },
+    {
+      id: "1",
+      type: "Nghỉ phép năm",
+      date: "15/05/2024",
+      duration: "1 ngày",
+      status: "Đã duyệt",
+      icon: "history"
+    },
+    {
+      id: "2",
+      type: "Nghỉ ốm",
+      date: "02/05/2024",
+      duration: "0.5 ngày",
+      status: "Đã duyệt",
+      icon: "medical_services"
+    }
+  ]);
+
   const handleSubmit = () => {
     setIsSubmitting(true);
     setTimeout(() => {
@@ -42,6 +69,16 @@ export default function LeavesPage() {
         targetRole: 'manager'
       });
       showToast("✅ Gửi đơn thành công. Quản lý đã được thông báo.", "success");
+
+      const newRequest = {
+        id: `new-${Date.now()}`,
+        type: leaveType === "annual" ? "Nghỉ phép năm" : leaveType === "sick" ? "Nghỉ ốm" : leaveType === "unpaid" ? "Nghỉ không lương" : "Làm việc từ xa",
+        date: fromDate.split('-').reverse().join('/'),
+        duration: duration === "full" ? "1 ngày" : "0.5 ngày",
+        status: "ĐANG CHỜ DUYỆT",
+        icon: leaveType === "annual" ? "history" : leaveType === "sick" ? "medical_services" : "hourglass_empty"
+      };
+      setHistory([newRequest, ...history]);
 
       setReason(""); // clear reason
 
@@ -83,17 +120,31 @@ export default function LeavesPage() {
           {/* Leave Balance Header (Kinetic Card) */}
           <section className="glass-card rounded-xl p-md flex justify-between items-center relative overflow-hidden">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-3xl"></div>
-            <div>
-              <p className="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Số ngày phép còn lại</p>
-              <div className="flex items-baseline gap-1">
-                <span className="font-headline-lg text-headline-lg text-primary font-bold">
-                  {isLoading ? "-" : (data?.leaveBalance?.remaining || "12.5")}
-                </span>
-                <span className="font-body-md text-body-md text-on-surface-variant">ngày</span>
+            <div className="flex w-full items-center justify-between z-10">
+              <div className="flex flex-col gap-2">
+                <p className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Quỹ phép năm</p>
+                <div className="flex gap-4">
+                  <div>
+                    <p className="text-on-surface-variant text-xs mb-1">Đã nghỉ</p>
+                    <p className="font-headline-sm text-error font-bold">3.5 <span className="text-xs font-normal">ngày</span></p>
+                  </div>
+                  <div>
+                    <p className="text-on-surface-variant text-xs mb-1">Còn lại</p>
+                    <p className="font-headline-sm text-primary font-bold">{isLoading ? "-" : (data?.leaveBalance?.remaining || "12.5")} <span className="text-xs font-normal">ngày</span></p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-primary/20 p-sm rounded-lg border border-primary/30">
-              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
+              
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path className="text-surface-container-highest" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className="text-primary" strokeDasharray="78.125, 100" strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="text-xs font-bold text-on-surface">16</span>
+                  <span className="text-[8px] text-on-surface-variant uppercase">Tổng</span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -101,6 +152,15 @@ export default function LeavesPage() {
           <section className="flex flex-col gap-4">
             <h2 className="font-headline-md text-headline-md text-on-surface font-bold">Đăng ký nghỉ</h2>
             <div className="glass-card rounded-xl p-md flex flex-col gap-md">
+              <div className="space-y-1.5">
+                <label className="font-label-sm text-label-sm text-on-surface-variant uppercase ml-1">Người duyệt trực tiếp</label>
+                <div className="relative">
+                  <select className="inset-input w-full rounded-lg px-md py-3 font-body-md text-on-surface appearance-none bg-surface-container/50">
+                    <option value="manager">Trần Thị B - Quản lý</option>
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <label className="font-label-sm text-label-sm text-on-surface-variant uppercase ml-1">Loại nghỉ</label>
                 <div className="relative">
@@ -110,7 +170,7 @@ export default function LeavesPage() {
                     onChange={(e) => setLeaveType(e.target.value)}
                   >
                     <option value="annual">Nghỉ phép năm</option>
-                    <option value="sick">Nghỉ ốm</option>
+                    <option value="sick">Nghỉ ốm (Hưởng BHXH)</option>
                     <option value="unpaid">Nghỉ không lương</option>
                     <option value="remote">Làm việc từ xa (Work from home)</option>
                   </select>
@@ -161,6 +221,12 @@ export default function LeavesPage() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                 ></textarea>
+                {leaveType === "annual" && (
+                  <p className="text-xs text-primary/80 ml-1 italic">* Đơn này sẽ trừ vào quỹ phép</p>
+                )}
+                {leaveType === "sick" && (
+                  <p className="text-xs text-error/80 ml-1 italic">* Cần đính kèm minh chứng y tế khi đi làm lại</p>
+                )}
               </div>
               <button 
                 onClick={handleSubmit}
@@ -199,32 +265,35 @@ export default function LeavesPage() {
               <span className="font-label-sm text-label-sm text-primary uppercase cursor-pointer hover:underline">Xem tất cả</span>
             </div>
             <div className="flex flex-col gap-3">
-              {/* Row 1 */}
-              <div className="glass-card rounded-xl p-md flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center">
-                    <span className="material-symbols-outlined text-on-surface-variant">history</span>
+              {history.map((item) => (
+                <div key={item.id} className={`glass-card rounded-xl p-md flex items-center justify-between transition-all ${item.status === "ĐANG CHỜ DUYỆT" ? "border-yellow-500/40 animate-pulse" : ""}`}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center">
+                      <span className="material-symbols-outlined text-on-surface-variant">{item.icon}</span>
+                    </div>
+                    <div>
+                      <p className={`font-body-md text-body-md font-medium ${item.status === "ĐANG CHỜ DUYỆT" ? "text-yellow-500" : "text-on-surface"}`}>{item.type}</p>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant">{item.date} • {item.duration}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-body-md text-body-md text-on-surface font-medium">Nghỉ phép năm</p>
-                    <p className="font-label-sm text-label-sm text-on-surface-variant">15/05/2024 • 1 ngày</p>
+                  <div className="flex items-center gap-2">
+                    {item.status === "ĐANG CHỜ DUYỆT" && (
+                      <button 
+                        onClick={() => {
+                          setHistory(history.filter(h => h.id !== item.id));
+                          showToast("Đã hủy yêu cầu thành công", "success");
+                        }}
+                        className="px-3 py-1.5 rounded bg-error/10 text-error font-label-sm text-[10px] uppercase hover:bg-error/20 transition-colors"
+                      >
+                        Hủy đơn
+                      </button>
+                    )}
+                    <span className={`px-2 py-1 rounded font-label-sm text-[10px] uppercase ${item.status === "ĐANG CHỜ DUYỆT" ? "bg-yellow-500/20 text-yellow-500" : "bg-secondary-container text-on-secondary-container"}`}>
+                      {item.status}
+                    </span>
                   </div>
                 </div>
-                <span className="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] uppercase">Đã duyệt</span>
-              </div>
-              {/* Row 2 */}
-              <div className="glass-card rounded-xl p-md flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center">
-                    <span className="material-symbols-outlined text-on-surface-variant">medical_services</span>
-                  </div>
-                  <div>
-                    <p className="font-body-md text-body-md text-on-surface font-medium">Nghỉ ốm</p>
-                    <p className="font-label-sm text-label-sm text-on-surface-variant">02/05/2024 • 0.5 ngày</p>
-                  </div>
-                </div>
-                <span className="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] uppercase">Đã duyệt</span>
-              </div>
+              ))}
             </div>
           </section>
         </div>

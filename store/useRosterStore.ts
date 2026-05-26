@@ -1,38 +1,53 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface RosterState {
-  matrixData: Record<string, any>;
-  offDayRequests: Record<string, string>; // staffId -> date (e.g. 's1' -> '25/05')
-  setShift: (staffId: string, date: string, shiftValue: string) => void;
-  requestOffDay: (staffId: string, date: string) => void;
-  publishRoster: () => void;
-  removeShift: (staffId: string, date: string) => void;
+export interface Shift {
+  id: string;
+  userId: string;
+  departmentId: string;
+  date: string;
+  shiftType: string;
+  status: 'Draft' | 'Published';
 }
 
-const INITIAL_MATRIX: Record<string, any> = {
-  's1_25/05': { shift: 'Sáng' },
-  's1_26/05': { shift: 'Chiều' },
-  's2_25/05': { shift: 'Chiều' },
-  's3_26/05': { shift: 'Sáng' },
-  's4_27/05': { shift: 'Sáng' },
-  's5_25/05': { shift: 'Sáng' },
-  's6_28/05': { shift: 'Chiều' },
-};
+interface RosterState {
+  globalShifts: Shift[];
+  offDayRequests: Record<string, string>; // staffId -> date
+  setShift: (userId: string, departmentId: string, date: string, shiftType: string) => void;
+  requestOffDay: (staffId: string, date: string) => void;
+  publishLocationShifts: (departmentId: string) => void;
+  removeShift: (userId: string, date: string) => void;
+}
+
+const INITIAL_SHIFTS: Shift[] = [
+  { id: '1', userId: 's1', departmentId: 'loc1', date: '25/05', shiftType: 'Sáng', status: 'Published' },
+  { id: '2', userId: 's1', departmentId: 'loc1', date: '26/05', shiftType: 'Chiều', status: 'Published' },
+  { id: '3', userId: 's2', departmentId: 'loc1', date: '25/05', shiftType: 'Chiều', status: 'Published' },
+  { id: '4', userId: 's3', departmentId: 'loc1', date: '26/05', shiftType: 'Sáng', status: 'Published' },
+  { id: '5', userId: 's4', departmentId: 'loc1', date: '27/05', shiftType: 'Sáng', status: 'Published' },
+  { id: '6', userId: 's5', departmentId: 'loc1', date: '25/05', shiftType: 'Sáng', status: 'Published' },
+  { id: '7', userId: 's6', departmentId: 'loc1', date: '28/05', shiftType: 'Chiều', status: 'Published' },
+];
 
 export const useRosterStore = create<RosterState>()(
   persist(
     (set) => ({
-      matrixData: INITIAL_MATRIX,
+      globalShifts: INITIAL_SHIFTS,
       offDayRequests: {},
 
-      setShift: (staffId, date, shiftValue) =>
-        set((state) => ({
-          matrixData: {
-            ...state.matrixData,
-            [`${staffId}_${date}`]: { shift: shiftValue },
-          },
-        })),
+      setShift: (userId, departmentId, date, shiftType) =>
+        set((state) => {
+          const newShifts = state.globalShifts.filter(s => !(s.userId === userId && s.date === date));
+          newShifts.push({
+            id: `${userId}_${date}_${Date.now()}`,
+            userId,
+            departmentId,
+            date,
+            shiftType,
+            status: 'Draft'
+          });
+          return { globalShifts: newShifts };
+        }),
 
       requestOffDay: (staffId, date) =>
         set((state) => ({
@@ -42,22 +57,39 @@ export const useRosterStore = create<RosterState>()(
           },
         })),
 
-      publishRoster: () =>
+      publishLocationShifts: (departmentId) =>
         set((state) => {
-          const newMatrix = { ...state.matrixData };
-          // Convert all requests to actual OFF shifts
-          Object.entries(state.offDayRequests).forEach(([staffId, date]) => {
-            newMatrix[`${staffId}_${date}`] = { shift: 'OFF' };
+          const newShifts = state.globalShifts.map(s => {
+            if (s.departmentId === departmentId && s.status === 'Draft') {
+              return { ...s, status: 'Published' as const };
+            }
+            return s;
           });
-          return { matrixData: newMatrix, offDayRequests: {} };
+          
+          Object.entries(state.offDayRequests).forEach(([staffId, date]) => {
+            const existing = newShifts.find(s => s.userId === staffId && s.date === date);
+            if (existing) {
+              existing.shiftType = 'OFF';
+              existing.status = 'Published';
+            } else {
+              newShifts.push({
+                id: `${staffId}_${date}_off`,
+                userId: staffId,
+                departmentId,
+                date,
+                shiftType: 'OFF',
+                status: 'Published'
+              });
+            }
+          });
+
+          return { globalShifts: newShifts, offDayRequests: {} };
         }),
 
-      removeShift: (staffId, date) =>
-        set((state) => {
-          const newMatrix = { ...state.matrixData };
-          delete newMatrix[`${staffId}_${date}`];
-          return { matrixData: newMatrix };
-        }),
+      removeShift: (userId, date) =>
+        set((state) => ({
+          globalShifts: state.globalShifts.filter(s => !(s.userId === userId && s.date === date))
+        })),
     }),
     {
       name: 'roster-storage',

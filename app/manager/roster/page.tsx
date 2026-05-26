@@ -27,7 +27,19 @@ const STAFF_LIST = [
 
 export default function ManagerRosterPage() {
   const router = useRouter();
-  const { matrixData, offDayRequests, setShift, publishRoster, removeShift } = useRosterStore();
+  const { globalShifts, offDayRequests, setShift, publishLocationShifts, removeShift } = useRosterStore();
+  
+  const [selectedLocation, setSelectedLocation] = useState('loc1');
+  
+  const matrixData = useMemo(() => {
+    const matrix: Record<string, any> = {};
+    globalShifts.forEach(shift => {
+      if (shift.departmentId === selectedLocation) {
+        matrix[`${shift.userId}_${shift.date}`] = { shift: shift.shiftType, status: shift.status };
+      }
+    });
+    return matrix;
+  }, [globalShifts, selectedLocation]);
   
   // Toasts
   const [showToast, setShowToast] = useState(false);
@@ -42,8 +54,8 @@ export default function ManagerRosterPage() {
   };
 
   const handlePublishRoster = () => {
-    publishRoster();
-    displayToast("Đã công bố lịch thành công! Trạng thái OFF đã được khóa và đồng bộ tới nhân viên.");
+    publishLocationShifts(selectedLocation);
+    displayToast("Đã công bố lịch thành công đến các điểm bán!");
   };
 
   // Tính toán số lượng request 'off' mỗi ngày
@@ -69,10 +81,19 @@ export default function ManagerRosterPage() {
           </button>
           <h1 className="font-headline-md text-headline-md font-bold text-on-surface">Quản Lý Xếp Ca</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <select 
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="bg-surface-container-highest border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface outline-none"
+          >
+            <option value="loc1">Co.opmart Gò Vấp</option>
+            <option value="loc2">Emart</option>
+            <option value="loc3">Sagrifood Store</option>
+          </select>
           <button onClick={handlePublishRoster} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary font-bold rounded-lg hover:brightness-110 transition-colors active:scale-95 shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-[18px]">publish</span>
-            <span className="hidden sm:inline">[ Công Bố Lịch ]</span>
+            <span className="hidden sm:inline">[ CÔNG BỐ LỊCH TUẦN ]</span>
             <span className="sm:hidden">Công bố</span>
           </button>
         </div>
@@ -181,12 +202,14 @@ export default function ManagerRosterPage() {
                               <span className="text-[10px] text-white/20 uppercase font-bold hidden group-hover/cell:block">Trống</span>
                            </div>
                         ) : cellData.shift === 'Sáng' ? (
-                          <div className="w-full h-full p-2 rounded-xl bg-orange-500/10 border border-orange-500/30 flex flex-col items-center justify-center">
+                          <div className={`w-full h-full p-2 rounded-xl ${cellData.status === 'Draft' ? 'bg-orange-500/5 border-dashed' : 'bg-orange-500/10'} border border-orange-500/30 flex flex-col items-center justify-center`}>
                             <span className="text-[13px] font-bold text-orange-400 uppercase tracking-wider">Ca Sáng</span>
+                            {cellData.status === 'Draft' && <span className="text-[9px] text-orange-400/70 mt-1">Draft</span>}
                           </div>
                         ) : cellData.shift === 'Chiều' ? (
-                          <div className="w-full h-full p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col items-center justify-center">
+                          <div className={`w-full h-full p-2 rounded-xl ${cellData.status === 'Draft' ? 'bg-blue-500/5 border-dashed' : 'bg-blue-500/10'} border border-blue-500/30 flex flex-col items-center justify-center`}>
                             <span className="text-[13px] font-bold text-blue-400 uppercase tracking-wider">Ca Chiều</span>
+                            {cellData.status === 'Draft' && <span className="text-[9px] text-blue-400/70 mt-1">Draft</span>}
                           </div>
                         ) : cellData.shift === 'OFF' ? (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/30 rounded-xl border border-dashed border-slate-800">
@@ -204,13 +227,13 @@ export default function ManagerRosterPage() {
 
                         {/* MENU ACTION HOVER - QUÉT NHANH */}
                         <div className="absolute inset-0 bg-surface-container/90 backdrop-blur-md rounded-xl flex-col items-center justify-center gap-1 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20 hidden group-hover/cell:flex border border-white/10">
-                           <button onClick={() => setShift(staff.id, day.date, 'Sáng')} className="w-[80%] py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded hover:bg-orange-500/40 transition-colors uppercase">
+                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'Sáng')} className="w-[80%] py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded hover:bg-orange-500/40 transition-colors uppercase">
                              Gán Sáng
                            </button>
-                           <button onClick={() => setShift(staff.id, day.date, 'Chiều')} className="w-[80%] py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded hover:bg-blue-500/40 transition-colors uppercase">
+                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'Chiều')} className="w-[80%] py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded hover:bg-blue-500/40 transition-colors uppercase">
                              Gán Chiều
                            </button>
-                           <button onClick={() => setShift(staff.id, day.date, 'OFF')} className="w-[80%] py-1 bg-slate-800 text-slate-300 text-[10px] font-bold rounded border border-dashed border-slate-600 hover:bg-slate-700 transition-colors uppercase mt-1">
+                           <button onClick={() => setShift(staff.id, selectedLocation, day.date, 'OFF')} className="w-[80%] py-1 bg-slate-800 text-slate-300 text-[10px] font-bold rounded border border-dashed border-slate-600 hover:bg-slate-700 transition-colors uppercase mt-1">
                              Cho OFF
                            </button>
                            <button onClick={() => {

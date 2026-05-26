@@ -29,7 +29,7 @@ const COWORKERS = [
 
 export default function StaffRosterMatrixPage() {
   const router = useRouter();
-  const { matrixData, offDayRequests, requestOffDay } = useRosterStore();
+  const { globalShifts, offDayRequests, requestOffDay } = useRosterStore();
   
   // Fake logged in user is s1 (Nguyễn Văn A)
   const myStaffId = 's1';
@@ -37,10 +37,10 @@ export default function StaffRosterMatrixPage() {
   // Convert Manager's matrix format to Staff view format
   const getStaffMatrixData = () => {
     const data: Record<string, any> = {};
-    Object.keys(matrixData).forEach(key => {
-       const [staffId, date] = key.split('_');
-       if (staffId === myStaffId) {
-          const shiftValue = matrixData[key].shift;
+    globalShifts.forEach(shift => {
+       if (shift.userId === myStaffId && shift.status === 'Published') {
+          const date = shift.date;
+          const shiftValue = shift.shiftType;
           if (shiftValue === 'Sáng') data[`${date}_morning`] = { type: 'my_shift', color: 'orange', hours: 8 };
           else if (shiftValue === 'Chiều') data[`${date}_afternoon`] = { type: 'my_shift', color: 'blue', hours: 8 };
           else if (shiftValue === 'OFF') data[`${date}_morning`] = { type: 'off' };
