@@ -2,20 +2,144 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===================================================
+   LIGHT MODE — Default (no .dark class)
+   =================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background:                   #f4f6fb;
+  --on-background:                #1a2340;
+  --surface:                      #ffffff;
+  --surface-dim:                  #dce1ed;
+  --surface-bright:               #ffffff;
+  --on-surface:                   #1a2340;
+  --on-surface-variant:           #44546a;
+
+  --surface-container-lowest:     #ffffff;
+  --surface-container-low:        #f0f3fa;
+  --surface-container:            #e8ecf5;
+  --surface-container-high:       #dce3ef;
+  --surface-container-highest:    #d0d8e8;
+
+  --primary:                      #4f52d6;
+  --primary-fixed:                #e1e0ff;
+  --primary-container:            #e1e0ff;
+  --on-primary:                   #ffffff;
+  --on-primary-container:         #07006c;
+
+  --secondary:                    #3a5375;
+  --secondary-container:          #d4e4fa;
+  --on-secondary:                 #ffffff;
+  --on-secondary-container:       #0d1c2d;
+
+  --tertiary:                     #b05c00;
+  --tertiary-container:           #ffdcc5;
+  --on-tertiary:                  #ffffff;
+  --on-tertiary-container:        #301400;
+
+  --error:                        #c0392b;
+  --error-container:              #ffdad6;
+  --on-error:                     #ffffff;
+  --on-error-container:           #410002;
+
+  --outline:                      #6b7a99;
+  --outline-variant:              #c1c9da;
+  --inverse-surface:              #2e3348;
+  --inverse-on-surface:           #eef1fc;
+  --inverse-primary:              #c0c1ff;
+  --surface-tint:                 #4f52d6;
+  --status-success:               #15803d;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===================================================
+   DARK MODE — .dark class on <html>
+   =================================================== */
+.dark {
+  --background:                   #0b1326;
+  --on-background:                #dae2fd;
+  --surface:                      #0b1326;
+  --surface-dim:                  #0b1326;
+  --surface-bright:               #31394d;
+  --on-surface:                   #dae2fd;
+  --on-surface-variant:           #c7c4d7;
+
+  --surface-container-lowest:     #060e20;
+  --surface-container-low:        #131b2e;
+  --surface-container:            #171f33;
+  --surface-container-high:       #222a3d;
+  --surface-container-highest:    #2d3449;
+
+  --primary:                      #c0c1ff;
+  --primary-fixed:                #e1e0ff;
+  --primary-container:            #8083ff;
+  --on-primary:                   #1000a9;
+  --on-primary-container:         #0d0096;
+
+  --secondary:                    #b9c8de;
+  --secondary-container:          #39485a;
+  --on-secondary:                 #233143;
+  --on-secondary-container:       #a7b6cc;
+
+  --tertiary:                     #ffb783;
+  --tertiary-container:           #d97721;
+  --on-tertiary:                  #4f2500;
+  --on-tertiary-container:        #452000;
+
+  --error:                        #ffb4ab;
+  --error-container:              #93000a;
+  --on-error:                     #690005;
+  --on-error-container:           #ffdad6;
+
+  --outline:                      #908fa0;
+  --outline-variant:              #464554;
+  --inverse-surface:              #dae2fd;
+  --inverse-on-surface:           #283044;
+  --inverse-primary:              #494bd6;
+  --surface-tint:                 #c0c1ff;
+  --status-success:               #10B981;
 }
 
+/* ===================================================
+   BASE STYLES
+   =================================================== */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--background);
+  color: var(--on-surface);
+  font-family: 'Geist', Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Smooth transitions on all common elements */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 2px; }
+
+/* Material Symbols default */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Glass card utility */
+.glass-card {
+  background: color-mix(in srgb, var(--surface-container) 80%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--outline-variant);
+}
+
+.dark .glass-card {
+  background: linear-gradient(135deg, rgba(23, 31, 51, 0.8) 0%, rgba(11, 19, 38, 0.9) 100%);
+  border-color: rgba(144, 143, 160, 0.2);
+}
+
+/* Animate fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease forwards; }

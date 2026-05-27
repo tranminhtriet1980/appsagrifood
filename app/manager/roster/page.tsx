@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-
 import { useRosterStore } from '@/store/useRosterStore';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // --- MOCK DATA ---
 const WEEK_DAYS = [
@@ -73,7 +73,7 @@ export default function ManagerRosterPage() {
   const THRESHOLD_30_PERCENT = Math.ceil(STAFF_LIST.length * 0.3); // 30% quân số
 
   return (
-    <div className="flex-1 min-h-screen bg-[#0b1326] pb-32 animate-fade-in">
+    <div className="flex-1 min-h-screen bg-background pb-32 animate-fade-in">
       <header className="w-full sticky top-0 z-40 bg-surface/80 backdrop-blur-md border-b border-surface-container-highest flex items-center justify-between px-md h-16">
         <div className="flex items-center gap-sm">
           <button className="md:hidden p-sm rounded-full text-primary hover:bg-surface-variant active:scale-90 transition-all" onClick={() => router.push('/dashboard')}>
@@ -81,11 +81,12 @@ export default function ManagerRosterPage() {
           </button>
           <h1 className="font-headline-md text-headline-md font-bold text-on-surface">Quản Lý Xếp Ca</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           <select 
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
-            className="bg-surface-container-highest border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface outline-none"
+            className="bg-surface-container-highest border border-outline-variant rounded-lg px-3 py-2 text-sm text-on-surface outline-none"
           >
             <option value="loc1">Co.opmart Gò Vấp</option>
             <option value="loc2">Emart</option>

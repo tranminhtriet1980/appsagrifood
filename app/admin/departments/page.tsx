@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function DepartmentsPage() {
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user && !["admin_company", "admin"].includes(user.role)) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
   const [departments, setDepartments] = useState([
     { id: "TCHC", name: "Phòng Tổ chức Hành chính", managerId: "manager_hr", employeeCount: 12 },
     { id: "KINH_DOANH", name: "Phòng Kinh doanh", managerId: "manager_kd", employeeCount: 45 },
@@ -16,10 +24,10 @@ export default function DepartmentsPage() {
 
   return (
     <div className="bg-background text-on-surface min-h-screen font-body-md flex flex-col pb-10">
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .glass-card { background: rgba(23, 31, 51, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(144, 143, 160, 0.2); }
-      `}</style>
+      ` }} />
       
       {/* Header */}
       <header className="w-full sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant px-6 h-16 flex items-center justify-between">

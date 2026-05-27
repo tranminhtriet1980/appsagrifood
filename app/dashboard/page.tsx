@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import NotificationBell from "@/components/NotificationBell";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -351,11 +352,11 @@ export default function DashboardPage() {
 
   return (
     <div className="font-body-md text-body-md overflow-x-hidden min-h-screen bg-background text-on-surface">
-        <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
           .material-symbols-outlined {
               font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
           }
-        `}</style>
+        ` }} />
         
         {/* Navigation Drawer (SideNav) */}
         <aside className={`h-screen w-64 fixed left-0 top-0 z-50 bg-surface-container border-r border-surface-container-highest flex flex-col py-lg transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:flex shadow-2xl md:shadow-none`}>
@@ -414,6 +415,7 @@ export default function DashboardPage() {
               <h2 className="font-headline-md text-headline-md font-bold text-primary">Quản lý Nhân sự</h2>
             </div>
             <div className="flex items-center gap-md">
+              <ThemeToggle />
               <NotificationBell />
               <Link href="/settings" className="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold overflow-hidden border border-primary hover:scale-105 transition-transform">
                 {user?.name?.substring(0, 2).toUpperCase() || 'US'}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const EMPLOYEES_MOCK = [
   {
@@ -59,27 +60,29 @@ export default function ManagerAttendancePage() {
   if (!isMounted) return <div className="min-h-screen bg-background flex items-center justify-center">Đang tải...</div>;
 
   return (
-    <div className="min-h-screen bg-[#0b1326] text-on-surface font-body-md flex flex-col pb-24">
+    <div className="min-h-screen bg-background text-on-surface font-body-md flex flex-col pb-24">
       <style dangerouslySetInnerHTML={{ __html: `
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .glass-card { background: linear-gradient(135deg, rgba(23, 31, 51, 0.8) 0%, rgba(11, 19, 38, 0.9) 100%); backdrop-filter: blur(16px); border: 1px solid rgba(144, 143, 160, 0.2); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       ` }} />
       
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-[#0b1326]/90 backdrop-blur-md border-b border-white/5 px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-md border-b border-outline-variant px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button className="text-on-surface-variant hover:text-white transition-colors" onClick={() => router.push('/dashboard')}>
+          <button className="text-on-surface-variant hover:text-on-surface transition-colors" onClick={() => router.push('/dashboard')}>
             <span className="material-symbols-outlined">menu</span>
           </button>
           <h1 className="font-headline-md text-[18px] font-bold text-on-surface">Quản lý Chấm công</h1>
         </div>
-        <div className="relative cursor-pointer" onClick={() => router.push('/settings')}>
-          <div className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold border-2 border-primary/30">
-            {user?.name?.substring(0, 2).toUpperCase() || 'MG'}
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <div className="relative cursor-pointer" onClick={() => router.push('/settings')}>
+            <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold border border-primary">
+              {user?.name?.substring(0, 2).toUpperCase() || 'MG'}
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></div>
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0b1326] rounded-full"></div>
         </div>
       </header>
 

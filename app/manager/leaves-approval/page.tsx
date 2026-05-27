@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface LeaveRequest {
   id: string;
@@ -167,7 +168,7 @@ export default function ManagerLeavesApprovalPage() {
   }), [requests]);
 
   return (
-    <div className="flex-1 min-h-screen bg-[#0b1326] text-white pb-32 animate-fade-in">
+    <div className="flex-1 min-h-screen bg-background text-on-surface pb-32 animate-fade-in">
 
       {/* Toast */}
       {toast && (
@@ -186,21 +187,22 @@ export default function ManagerLeavesApprovalPage() {
       )}
 
       {/* Header */}
-      <header className="w-full sticky top-0 z-40 bg-[#0b1326]/90 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-6 h-16">
+      <header className="w-full sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="p-2 rounded-full text-[#7c9fd4] hover:bg-white/5 active:scale-95 transition-all"
+            className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container active:scale-95 transition-all"
             title="Quay lại Dashboard"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-lg font-bold text-white leading-tight">Phê Duyệt Đơn Nghỉ Phép</h1>
-            <p className="text-xs text-slate-400">Quản lý & theo dõi đơn của nhân viên</p>
+            <h1 className="text-lg font-bold text-on-surface leading-tight">Phê Duyệt Đơn Nghỉ Phép</h1>
+            <p className="text-xs text-on-surface-variant">Quản lý & theo dõi đơn của nhân viên</p>
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm font-bold">
+          <ThemeToggle />
           {stats.pending > 0 ? (
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-full text-xs">
               <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
