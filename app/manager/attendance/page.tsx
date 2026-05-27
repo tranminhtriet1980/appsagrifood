@@ -60,12 +60,12 @@ export default function ManagerAttendancePage() {
 
   return (
     <div className="min-h-screen bg-[#0b1326] text-on-surface font-body-md flex flex-col pb-24">
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .glass-card { background: linear-gradient(135deg, rgba(23, 31, 51, 0.8) 0%, rgba(11, 19, 38, 0.9) 100%); backdrop-filter: blur(16px); border: 1px solid rgba(144, 143, 160, 0.2); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      ` }} />
       
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#0b1326]/90 backdrop-blur-md border-b border-white/5 px-4 h-16 flex items-center justify-between">

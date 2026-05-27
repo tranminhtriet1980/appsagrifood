@@ -99,12 +99,12 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
 
   return (
     <div className="min-h-screen bg-[#0b1326] text-on-surface font-body-md flex flex-col pb-24">
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .glass-card { background: linear-gradient(135deg, rgba(23, 31, 51, 0.8) 0%, rgba(11, 19, 38, 0.9) 100%); backdrop-filter: blur(16px); border: 1px solid rgba(144, 143, 160, 0.2); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      ` }} />
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#0b1326]/90 backdrop-blur-md border-b border-white/5 px-4 h-16 flex items-center justify-between">
@@ -431,7 +431,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
 
   return (
     <div className="bg-background text-on-surface selection:bg-primary/30 min-h-screen relative">
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .glow-pulse {
             animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -454,7 +454,7 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
             0% { top: 0; }
             100% { top: 100%; }
         }
-      `}</style>
+      ` }} />
 
       {/* Top Navigation */}
       <header className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-50 bg-background/80 backdrop-blur-md">
