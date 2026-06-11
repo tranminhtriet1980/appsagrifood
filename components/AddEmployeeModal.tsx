@@ -21,7 +21,19 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }: AddEmploye
     position: "",
     location: "",
     startDate: "",
+    contractExpiry: "",
+    status: "Thử việc" as "Chính thức" | "Thử việc" | "Thai sản" | "Nghỉ việc",
   });
+
+  const contractWarning = (() => {
+    if (!formData.contractExpiry) return null;
+    const today = new Date();
+    const expiry = new Date(formData.contractExpiry);
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { type: "error", msg: "Hợp đồng đã hết hạn. Kiểm tra lại ngày ký hợp đồng." };
+    if (diffDays <= 30) return { type: "warn", msg: `Hợp đồng sắp hết hạn trong ${diffDays} ngày (§20 BLLĐ)` };
+    return null;
+  })();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,17 +73,19 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }: AddEmploye
       setIsAiScanned(true);
       setFormData({
         name: "Nguyễn Minh Tuấn",
-        dob: "1995-08-15", // formatted for date input
+        dob: "1995-08-15",
         idNumber: "079095123456",
         address: "123 Nguyễn Văn Linh, Quận 7, TP.HCM",
         position: "Nhân viên bán hàng",
         location: "Emart Gò Vấp",
-        startDate: "2026-06-01", // formatted for date input
+        startDate: "2026-06-01",
+        contractExpiry: "2027-06-01",
+        status: "Thử việc",
       });
     }, 2500);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -233,6 +247,47 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }: AddEmploye
                   onChange={handleInputChange}
                   className={`w-full rounded-lg px-4 py-2 border transition-all outline-none ${highlightClass} [color-scheme:dark]`}
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-sm text-on-surface-variant flex items-center gap-1">
+                  Ngày hết hạn HĐ
+                  <span className="text-[10px] text-orange-400 font-bold">§ Điều 20</span>
+                </label>
+                <input 
+                  type="date" 
+                  name="contractExpiry"
+                  value={formData.contractExpiry} 
+                  onChange={handleInputChange}
+                  className={`w-full rounded-lg px-4 py-2 border transition-all outline-none ${
+                    contractWarning?.type === "error" ? "border-red-500/50 bg-red-500/5 text-on-surface focus:border-red-400" :
+                    contractWarning?.type === "warn" ? "border-orange-400/50 bg-orange-400/5 text-on-surface focus:border-orange-400" :
+                    highlightClass
+                  } [color-scheme:dark]`}
+                />
+                {contractWarning && (
+                  <p className={`text-[11px] flex items-center gap-1 font-bold mt-1 ${
+                    contractWarning.type === "error" ? "text-red-500" : "text-orange-400"
+                  }`}>
+                    <span className="material-symbols-outlined text-[13px]">warning</span>
+                    {contractWarning.msg}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-label-sm text-on-surface-variant">Trạng thái hợp đồng</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-lg px-4 py-2 border transition-all outline-none ${highlightClass}`}
+                >
+                  <option value="Thử việc">Thử việc</option>
+                  <option value="Chính thức">Chính thức</option>
+                  <option value="Thai sản">Thai sản</option>
+                  <option value="Nghỉ việc">Nghỉ việc</option>
+                </select>
               </div>
             </div>
             

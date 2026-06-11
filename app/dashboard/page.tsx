@@ -109,6 +109,73 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {/* Analytics Dashboard Section */}
+      <div className="mb-lg space-y-4">
+        <h4 className="font-label-md text-on-surface-variant uppercase tracking-wider font-bold">Analytics Dashboard</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+          {/* Card 1: Tổng số nhân sự tại quầy */}
+          <div className="bg-surface-container border border-surface-container-highest rounded-xl p-md flex flex-col justify-between hover:bg-surface-container-high transition-colors">
+            <div className="flex justify-between items-start mb-sm">
+              <h4 className="font-label-md text-slate-500 uppercase tracking-wider">Tổng số nhân sự tại quầy</h4>
+              <span className="material-symbols-outlined text-teal-600">storefront</span>
+            </div>
+            <div className="mt-4">
+              <p className="text-4xl font-extrabold text-blue-900 dark:text-blue-400">124</p>
+              <p className="text-sm text-teal-600 font-bold mt-1">+12% so với tháng trước</p>
+            </div>
+          </div>
+
+          {/* Card 2: Mật độ nhân sự theo điểm bán */}
+          <div className="bg-surface-container border border-surface-container-highest rounded-xl p-md flex flex-col justify-between hover:bg-surface-container-high transition-colors">
+            <div className="flex justify-between items-start mb-sm">
+              <h4 className="font-label-md text-slate-500 uppercase tracking-wider">Mật độ nhân sự theo điểm bán</h4>
+              <span className="material-symbols-outlined text-teal-600">bar_chart</span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {[
+                { name: "Coop Cống Quỳnh", count: 5, percent: 80 },
+                { name: "BigC Q7", count: 4, percent: 60 },
+                { name: "Emart Gò Vấp", count: 3, percent: 40 },
+              ].map((store) => (
+                <div key={store.name} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-xs font-bold text-blue-900 dark:text-blue-300">
+                    <span>{store.name}</span>
+                    <span>{store.count}</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-teal-500 h-full rounded-full" style={{ width: `${store.percent}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Card 3: Cơ cấu Giới tính */}
+          <div className="bg-surface-container border border-surface-container-highest rounded-xl p-md flex flex-col justify-between hover:bg-surface-container-high transition-colors">
+            <div className="flex justify-between items-start mb-sm">
+              <h4 className="font-label-md text-slate-500 uppercase tracking-wider">Cơ cấu Giới tính</h4>
+              <span className="material-symbols-outlined text-teal-600">wc</span>
+            </div>
+            <div className="mt-4 flex flex-col justify-center h-full">
+              <div className="flex justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-900 dark:bg-blue-500"></span>
+                  <span className="text-sm font-bold text-blue-900 dark:text-blue-300">Nam (45%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-teal-500"></span>
+                  <span className="text-sm font-bold text-teal-700 dark:text-teal-400">Nữ (55%)</span>
+                </div>
+              </div>
+              <div className="w-full flex h-4 rounded-full overflow-hidden shadow-inner">
+                <div className="bg-blue-900 dark:bg-blue-500 h-full" style={{ width: "45%" }}></div>
+                <div className="bg-teal-500 h-full" style={{ width: "55%" }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
         {/* Widget 1: Tổng quan Sĩ số */}
         <div className="bg-surface-container border border-surface-container-highest rounded-xl p-md flex flex-col justify-between hover:bg-surface-container-high transition-colors">
