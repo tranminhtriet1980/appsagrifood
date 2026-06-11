@@ -7,7 +7,7 @@ const secretKey = new TextEncoder().encode(
 );
 
 // Danh sách các route yêu cầu người dùng phải đăng nhập mới được vào
-const protectedRoutes = ['/dashboard', '/attendance', '/leaves', '/approvals', '/admin', '/manager', '/notifications', '/history', '/overtime', '/staff', '/employees', '/reports', '/roster', '/settings'];
+const protectedRoutes = ['/dashboard', '/attendance', '/leaves', '/approvals', '/admin', '/manager', '/notifications', '/history', '/overtime', '/staff', '/employees', '/reports', '/roster', '/settings', '/api/admin', '/api/manager', '/api/leaves'];
 
 export async function middleware(request: NextRequest) {
   // Lấy giá trị cookie auth_token (JWT)
@@ -76,7 +76,10 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Cấu hình áp dụng middleware (Bỏ qua API, thư mục _next (chứa js, css) và ảnh tĩnh)
+// Cấu hình áp dụng middleware (Bảo vệ cả giao diện UI và các API nhạy cảm)
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    // 1. Chặn toàn bộ các trang giao diện (ngoại trừ _next tĩnh và file hệ thống)
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Excel to JSON Parser</title>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Excel to JSON Parser</h1>
+  <input type="file" id="file-input" />
+  <pre id="output" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+  <script>
+    document.getElementById('file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Let's get the first sheet with data
+          let worksheet = null;
+          let sheetName = "";
+          for (const name of workbook.SheetNames) {
+            const ws = workbook.Sheets[name];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            if (rows && rows.length > 0) {
+              worksheet = ws;
+              sheetName = name;
+              break;
+            }
+          }
+          if (!worksheet) {
+            document.getElementById('output').textContent = "No sheet with data found";
+            return;
+          }
+          
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+          
+          document.getElementById('output').textContent = JSON.stringify({
+            sheetName: sheetName,
+            rawRows: rawRows,
+            jsonData: jsonData
+          }, null, 2);
+        } catch (err) {
+          document.getElementById('output').textContent = "Error: " + err.message;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>

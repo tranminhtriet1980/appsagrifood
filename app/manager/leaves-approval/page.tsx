@@ -110,23 +110,50 @@ export default function ManagerLeavesApprovalPage() {
   const pendingList = useMemo(() => requests.filter((r) => r.status === 'Pending'), [requests]);
   const historyList = useMemo(() => requests.filter((r) => r.status !== 'Pending'), [requests]);
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
     const req = requests.find((r) => r.id === id);
     if (!req) return;
 
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'Approved' } : r)));
+    // Phân quyền phía Frontend (Chỉ bảo vệ UX, API đã có bảo vệ)
+    const validRoles = ["manager", "director", "admin_company", "admin"];
+    if (!managerUser || !validRoles.includes(managerUser.role)) {
+      triggerToast('Bạn không có quyền duyệt đơn này.', 'error');
+      return;
+    }
 
-    // Notify staff
-    addNotification({
-      senderName: managerUser?.name || 'Quản lý',
-      title: 'Đơn xin nghỉ đã được duyệt ✅',
-      message: `Đơn nghỉ ${req.leaveType} từ ${req.startDate} đến ${req.endDate} của bạn đã được phê duyệt.`,
-      time: 'Vừa xong',
-      targetRole: 'staff',
-      targetUserId: req.staffId,
-    });
+    try {
+      const res = await fetch('/api/leave-requests/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: req.id,
+          status: 'Approved',
+          approverId: managerUser.id,
+          approverRole: managerUser.role,
+          startDate: req.startDate,
+          endDate: req.endDate,
+          userId: req.staffId,
+          leaveType: req.leaveType
+        })
+      });
+      if (!res.ok) throw new Error('API Error');
 
-    triggerToast(`✅ Đã duyệt đơn nghỉ của ${req.name}`, 'success');
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'Approved' } : r)));
+
+      // Notify staff
+      addNotification({
+        senderName: managerUser?.name || 'Quản lý',
+        title: 'Đơn xin nghỉ đã được duyệt ✅',
+        message: `Đơn nghỉ ${req.leaveType} từ ${req.startDate} đến ${req.endDate} của bạn đã được phê duyệt.`,
+        time: 'Vừa xong',
+        targetRole: 'staff',
+        targetUserId: req.staffId,
+      });
+
+      triggerToast(`✅ Đã duyệt đơn nghỉ của ${req.name}`, 'success');
+    } catch (e) {
+      triggerToast('Lỗi khi duyệt đơn', 'error');
+    }
   };
 
   const handleOpenRejectModal = (req: LeaveRequest) => {
@@ -134,28 +161,54 @@ export default function ManagerLeavesApprovalPage() {
     setRejectModal({ id: req.id, name: req.name });
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!rejectModal) return;
     const req = requests.find((r) => r.id === rejectModal.id);
     if (!req) return;
 
-    setRequests((prev) =>
-      prev.map((r) => (r.id === rejectModal.id ? { ...r, status: 'Rejected' } : r))
-    );
+    const validRoles = ["manager", "director", "admin_company", "admin"];
+    if (!managerUser || !validRoles.includes(managerUser.role)) {
+      triggerToast('Bạn không có quyền từ chối đơn này.', 'error');
+      return;
+    }
 
-    // Notify staff about rejection
-    addNotification({
-      senderName: managerUser?.name || 'Quản lý',
-      title: 'Đơn xin nghỉ bị từ chối ❌',
-      message: `Đơn nghỉ ${req.leaveType} từ ${req.startDate} của bạn đã bị từ chối.${rejectReason ? ` Lý do: ${rejectReason}` : ''}`,
-      time: 'Vừa xong',
-      targetRole: 'staff',
-      targetUserId: req.staffId,
-    });
+    try {
+      const res = await fetch('/api/leave-requests/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: req.id,
+          status: 'Rejected',
+          approverId: managerUser.id,
+          approverRole: managerUser.role,
+          startDate: req.startDate,
+          endDate: req.endDate,
+          userId: req.staffId,
+          leaveType: req.leaveType
+        })
+      });
+      if (!res.ok) throw new Error('API Error');
 
-    triggerToast(`Đã từ chối đơn của ${req.name}`, 'error');
-    setRejectModal(null);
-    setRejectReason('');
+      setRequests((prev) =>
+        prev.map((r) => (r.id === rejectModal.id ? { ...r, status: 'Rejected' } : r))
+      );
+
+      // Notify staff about rejection
+      addNotification({
+        senderName: managerUser?.name || 'Quản lý',
+        title: 'Đơn xin nghỉ bị từ chối ❌',
+        message: `Đơn nghỉ ${req.leaveType} từ ${req.startDate} của bạn đã bị từ chối.${rejectReason ? ` Lý do: ${rejectReason}` : ''}`,
+        time: 'Vừa xong',
+        targetRole: 'staff',
+        targetUserId: req.staffId,
+      });
+
+      triggerToast(`Đã từ chối đơn của ${req.name}`, 'error');
+      setRejectModal(null);
+      setRejectReason('');
+    } catch (e) {
+      triggerToast('Lỗi khi từ chối đơn', 'error');
+    }
   };
 
   const stats = useMemo(() => ({
@@ -266,6 +319,7 @@ export default function ManagerLeavesApprovalPage() {
                 <LeaveCard
                   key={req.id}
                   req={req}
+                  isManager={managerUser ? ["manager", "director", "admin_company", "admin"].includes(managerUser.role) : false}
                   onApprove={() => handleApprove(req.id)}
                   onReject={() => handleOpenRejectModal(req)}
                 />
@@ -360,10 +414,12 @@ export default function ManagerLeavesApprovalPage() {
 
 function LeaveCard({
   req,
+  isManager,
   onApprove,
   onReject,
 }: {
   req: LeaveRequest;
+  isManager: boolean;
   onApprove: () => void;
   onReject: () => void;
 }) {
@@ -414,22 +470,24 @@ function LeaveCard({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <button
-          onClick={onReject}
-          className="flex-1 py-2.5 bg-red-500/8 text-red-400 border border-red-500/20 text-sm font-bold rounded-xl hover:bg-red-500/15 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-        >
-          <span className="material-symbols-outlined text-[16px]">close</span>
-          Từ chối
-        </button>
-        <button
-          onClick={onApprove}
-          className="flex-[1.5] py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-green-900/30"
-        >
-          <span className="material-symbols-outlined text-[16px]">check</span>
-          Phê duyệt
-        </button>
-      </div>
+      {isManager && (
+        <div className="flex gap-3">
+          <button
+            onClick={onReject}
+            className="flex-1 py-2.5 bg-red-500/8 text-red-400 border border-red-500/20 text-sm font-bold rounded-xl hover:bg-red-500/15 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+            Từ chối
+          </button>
+          <button
+            onClick={onApprove}
+            className="flex-[1.5] py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-green-900/30"
+          >
+            <span className="material-symbols-outlined text-[16px]">check</span>
+            Phê duyệt
+          </button>
+        </div>
+      )}
     </div>
   );
 }

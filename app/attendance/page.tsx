@@ -95,8 +95,22 @@ const EMPLOYEES_MOCK = [
 
 type TabType = "Hôm nay" | "Tuần" | "Tháng";
 
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
   const [activeTab, setActiveTab] = useState<TabType>("Hôm nay");
+  
+  // Áp dụng SWR để Polling real-time mỗi 5 giây
+  const { data, error, isLoading } = useSWR(
+    `/api/attendance/manager?tab=${activeTab}`, 
+    fetcher, 
+    { refreshInterval: 5000 }
+  );
+
+  const employees = data?.employees || EMPLOYEES_MOCK;
+  const stats = data?.stats || { total: 24, checkedIn: 18, late: 2, missing: 4 };
 
   return (
     <div className="min-h-screen bg-[#0b1326] text-on-surface font-body-md flex flex-col pb-24">
@@ -169,7 +183,7 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
             <span className="text-[10px] uppercase font-bold tracking-wider">Tổng quân số</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-headline-lg text-[28px] font-bold text-on-surface">24</span>
+            <span className="text-headline-lg text-[28px] font-bold text-on-surface">{stats.total}</span>
           </div>
         </div>
 
@@ -180,7 +194,7 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
             <span className="text-[10px] uppercase font-bold tracking-wider">Đã Check-in</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-headline-lg text-[28px] font-bold text-green-400">18</span>
+            <span className="text-headline-lg text-[28px] font-bold text-green-400">{stats.checkedIn}</span>
           </div>
         </div>
 
@@ -191,7 +205,7 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
             <span className="text-[10px] uppercase font-bold tracking-wider">Đi muộn</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-headline-lg text-[28px] font-bold text-orange-400">2</span>
+            <span className="text-headline-lg text-[28px] font-bold text-orange-400">{stats.late}</span>
           </div>
         </div>
 
@@ -202,7 +216,7 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
             <span className="text-[10px] uppercase font-bold tracking-wider">Chưa Check-in</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-headline-lg text-[28px] font-bold text-error">4</span>
+            <span className="text-headline-lg text-[28px] font-bold text-error">{stats.missing}</span>
           </div>
         </div>
       </div>
@@ -218,7 +232,8 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
         </div>
 
         <div className="space-y-3">
-          {EMPLOYEES_MOCK.map((emp) => (
+          {isLoading && <div className="text-center text-primary">Đang tải dữ liệu...</div>}
+          {!isLoading && employees.map((emp: any) => (
             <div key={emp.id} className="glass-card rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Avatar */}
@@ -341,17 +356,24 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
       try {
         const pending = await getOfflineCheckins();
         if (pending.length > 0) {
-          toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 2000)).then(clearOfflineCheckins),
-            {
-              loading: `Đang đồng bộ ${pending.length} bản ghi chấm công offline...`,
-              success: `Đồng bộ hoàn tất. Hệ thống ghi nhận giờ gốc của ${pending.length} bản ghi.`,
-              error: 'Lỗi đồng bộ dữ liệu.',
-            }
-          );
+          toast.loading(`Đang đồng bộ ${pending.length} bản ghi chấm công offline...`, { id: 'sync' });
+          
+          const res = await fetch('/api/attendance/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: pending })
+          });
+          
+          if (res.ok) {
+            await clearOfflineCheckins();
+            toast.success(`Đồng bộ hoàn tất ${pending.length} bản ghi lên máy chủ.`, { id: 'sync' });
+          } else {
+            throw new Error('Sync API Error');
+          }
         }
-      } catch (e) {
-        console.error("Lỗi đọc IndexedDB", e);
+      } catch (err) {
+        console.error("Lỗi Bulk Sync:", err);
+        toast.error('Lỗi đồng bộ dữ liệu. Sẽ thử lại sau.', { id: 'sync' });
       }
     };
 
@@ -387,11 +409,38 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
     // Sử dụng giờ hệ thống chuẩn làm timestamp
     const trueTimestamp = getTrueTime().toISOString();
 
+    let realLocation = 'Không xác định';
+    if ("geolocation" in navigator) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { 
+             enableHighAccuracy: true,
+             timeout: 5000,
+             maximumAge: 0
+          });
+        });
+        
+        // 3. Fake GPS Detection
+        const accuracy = position.coords.accuracy;
+        if (accuracy === 0 || accuracy > 2000) {
+           toast.error(`Cảnh báo: Tọa độ GPS có dấu hiệu bất thường (Sai số: ${Math.round(accuracy)}m). Vui lòng tắt Fake GPS!`);
+           setIsCheckingIn(false);
+           return;
+        }
+
+        realLocation = `GPS: ${position.coords.latitude}, ${position.coords.longitude} (±${Math.round(accuracy)}m)`;
+      } catch(e) {
+        realLocation = 'Văn phòng Bitexco (Mặc định)';
+      }
+    } else {
+      realLocation = 'Văn phòng Bitexco (Mặc định)';
+    }
+
     const checkinData = {
       id: Date.now().toString(),
       userId: user?.id || 'staff',
       userName: user?.name || 'Nhân viên',
-      location: 'Văn phòng Bitexco',
+      location: realLocation,
       timestamp: trueTimestamp,
       type: 'check-in',
       imageBase64: base64Image || 'data:image/jpeg;base64,...',
@@ -420,10 +469,21 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
       }, 1000);
     } else {
       // Gọi API thực tế
-      setTimeout(() => {
+      try {
+        const response = await fetch('/api/attendance/check-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(checkinData)
+        });
+
+        if (!response.ok) throw new Error('Check-in failed on server');
+
         setIsCheckingIn(false);
         setShowSuccess(true);
-      }, 1500);
+      } catch (err) {
+        setIsCheckingIn(false);
+        toast.error("Lỗi khi kết nối đến máy chủ", { style: { background: '#ef4444', color: '#fff' } });
+      }
     }
   };
 

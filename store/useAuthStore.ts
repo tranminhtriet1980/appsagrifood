@@ -29,7 +29,14 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ user, isAuthenticated: true });
       },
-      logout: () => {
+      logout: async () => {
+        // Gọi API xóa HttpOnly cookie trên Backend
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (error) {
+          console.error("Lỗi khi gọi API logout:", error);
+        }
+
         // Clean State khi đăng xuất
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth-storage");

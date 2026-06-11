@@ -20,8 +20,9 @@ export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [timeStr, setTimeStr] = useState("04:32:15");
+  const [selectedLocation, setSelectedLocation] = useState<string>(''); // Rỗng là toàn công ty
 
-  const { data, isLoading } = useSWR("/api/dashboard/stats", fetcher);
+  const { data, isLoading } = useSWR(`/api/dashboard/stats${selectedLocation ? `?locationId=${selectedLocation}` : ''}`, fetcher, { refreshInterval: 5000 }); // Realtime 5s
 
   useEffect(() => {
     setIsMounted(true);
@@ -65,14 +66,22 @@ export default function DashboardPage() {
     { name: "Tháp điều khiển", icon: "dashboard", href: "/dashboard" },
     { name: "Quản lý Chấm công", icon: "assignment_turned_in", href: "/manager/attendance" },
     { name: "Xếp ca", icon: "calendar_month", href: "/manager/roster" },
-    { name: "Nhân sự", icon: "groups", href: "/employees" },
-    { name: "Phê duyệt", icon: "fact_check", href: "/approvals" },
-    { name: "Báo cáo", icon: "analytics", href: "/reports" },
-    { name: "Cài đặt tài khoản", icon: "settings", href: "/settings" },
+    { name: "Phê duyệt", icon: "fact_check", href: "/manager/leaves-approval" },
+    { name: "Báo cáo", icon: "analytics", href: "/manager/monitor" },
+  ];
+
+  const adminMenu = [
+    ...managerMenu,
+    { name: "Nhân sự & Tổ chức", icon: "groups", href: "/admin/employees" },
+    { name: "Quản trị Hệ thống", icon: "admin_panel_settings", href: "/admin/dashboard" },
   ];
 
   const isManager = user?.role && ["manager", "director", "admin_company", "admin"].includes(user.role);
-  const activeMenu = isManager ? managerMenu : staffMenu;
+  const isAdmin = user?.role && ["director", "admin_company", "admin"].includes(user.role);
+  
+  let activeMenu = staffMenu;
+  if (isAdmin) activeMenu = adminMenu;
+  else if (isManager) activeMenu = managerMenu;
 
   if (!isMounted) {
     return <div className="min-h-screen flex items-center justify-center bg-background text-on-surface">Đang tải dữ liệu...</div>;
@@ -83,9 +92,21 @@ export default function DashboardPage() {
     <div className="space-y-gutter">
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
         <div>
-          <h3 className="font-headline-lg text-headline-lg text-on-surface">Tháp điều khiển (Manager)</h3>
+          <h3 className="font-headline-lg text-headline-lg text-on-surface">Tháp điều khiển ({user?.role})</h3>
           <p className="font-body-md text-body-md text-on-surface-variant">{currentDate}</p>
         </div>
+        {isAdmin && (
+           <select 
+             className="bg-surface-container border border-outline-variant rounded-lg px-4 py-2 text-on-surface"
+             value={selectedLocation}
+             onChange={(e) => setSelectedLocation(e.target.value)}
+           >
+             <option value="">Toàn Công Ty</option>
+             {data?.locations?.map((loc: any) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+             ))}
+           </select>
+        )}
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
@@ -96,24 +117,24 @@ export default function DashboardPage() {
             <span className="material-symbols-outlined text-primary">groups</span>
           </div>
           <div>
-            <h3 className="font-headline-lg font-bold text-primary">Quân số hôm nay: 8/10</h3>
+            <h3 className="font-headline-lg font-bold text-primary">Quân số hôm nay: {data?.managerStats?.presentStaff || 0}/{data?.managerStats?.totalStaff || 0}</h3>
             <div className="flex gap-4 mt-2">
-              <span className="text-error font-label-md bg-error-container/20 px-2 py-0.5 rounded text-xs">Đi muộn: 1</span>
-              <span className="text-tertiary font-label-md bg-tertiary-container/20 px-2 py-0.5 rounded text-xs">Nghỉ phép: 1</span>
+              <span className="text-error font-label-md bg-error-container/20 px-2 py-0.5 rounded text-xs">Đi muộn: {data?.managerStats?.lateCount || 0}</span>
+              <span className="text-tertiary font-label-md bg-tertiary-container/20 px-2 py-0.5 rounded text-xs">Nghỉ phép: {data?.managerStats?.leaveCount || 0}</span>
             </div>
           </div>
         </div>
 
         {/* Widget 2: Đơn từ chờ duyệt / Cảnh báo */}
-        <div className={`bg-surface-container-high border-2 ${dashboardAlerts.length > 0 ? "border-error-container hover:border-error" : "border-surface-container-highest hover:border-primary/50"} rounded-xl p-md flex flex-col justify-between relative overflow-hidden group transition-colors cursor-pointer`} onClick={() => router.push('/manager/leaves-approval')}>
+        <div className={`bg-surface-container-high border-2 ${data?.managerStats?.pendingLeaves > 0 ? "border-error-container hover:border-error" : "border-surface-container-highest hover:border-primary/50"} rounded-xl p-md flex flex-col justify-between relative overflow-hidden group transition-colors cursor-pointer`} onClick={() => router.push('/manager/leaves-approval')}>
           <div className="z-10 flex justify-between items-start mb-sm">
-            <h4 className={`font-label-md uppercase tracking-wider font-bold ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>ĐƠN NGHỈ PHÉP</h4>
-            <span className={`material-symbols-outlined ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-              {dashboardAlerts.length > 0 ? "warning" : "fact_check"}
+            <h4 className={`font-label-md uppercase tracking-wider font-bold ${data?.managerStats?.pendingLeaves > 0 ? "text-error" : "text-primary"}`}>ĐƠN NGHỈ PHÉP</h4>
+            <span className={`material-symbols-outlined ${data?.managerStats?.pendingLeaves > 0 ? "text-error" : "text-primary"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+              {data?.managerStats?.pendingLeaves > 0 ? "warning" : "fact_check"}
             </span>
           </div>
           <div className="z-10 flex flex-col gap-sm">
-            <h3 className={`font-headline-lg font-bold ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>Có 3 đơn chờ duyệt</h3>
+            <h3 className={`font-headline-lg font-bold ${data?.managerStats?.pendingLeaves > 0 ? "text-error" : "text-primary"}`}>Có {data?.managerStats?.pendingLeaves || 0} đơn chờ duyệt</h3>
             
             {/* Hiển thị danh sách Alert nếu có */}
             {dashboardAlerts.length > 0 && (
@@ -127,12 +148,12 @@ export default function DashboardPage() {
               </div>
             )}
             
-            <div className={`flex items-center gap-1 mt-2 text-sm font-bold ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>
+            <div className={`flex items-center gap-1 mt-2 text-sm font-bold ${data?.managerStats?.pendingLeaves > 0 ? "text-error" : "text-primary"}`}>
               <span>Đi tới Phê duyệt</span>
               <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </div>
           </div>
-          <span className={`material-symbols-outlined absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:animate-bounce transition-transform ${dashboardAlerts.length > 0 ? "text-error" : "text-primary"}`}>edit_document</span>
+          <span className={`material-symbols-outlined absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:animate-bounce transition-transform ${data?.managerStats?.pendingLeaves > 0 ? "text-error" : "text-primary"}`}>edit_document</span>
         </div>
 
         {/* Widget 3: Truy cập nhanh */}
@@ -173,9 +194,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center justify-around mt-2">
-            <span className="text-xs font-bold text-on-surface-variant">Emart</span>
-            <span className="text-xs font-bold text-on-surface-variant">Lotte Q7</span>
-            <span className="text-xs font-bold text-on-surface-variant">Sagri Q1</span>
+            {data?.locations?.map((loc: any) => (
+              <span key={loc.id} className="text-xs font-bold text-on-surface-variant truncate max-w-[80px]">{loc.name}</span>
+            )) || (
+              <>
+                <span className="text-xs font-bold text-on-surface-variant">Emart</span>
+                <span className="text-xs font-bold text-on-surface-variant">Lotte Q7</span>
+                <span className="text-xs font-bold text-on-surface-variant">Sagri Q1</span>
+              </>
+            )}
           </div>
           <div className="mt-4 flex justify-between items-center text-xs text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">
             <span>Xem chi tiết danh sách đi muộn</span>
@@ -381,8 +408,10 @@ export default function DashboardPage() {
                   <span className="material-symbols-outlined">{menu.icon}</span>
                   <span className="font-body-md text-body-md">{menu.name}</span>
                 </div>
-                {menu.href === '/approvals' && (
-                  <span className="w-5 h-5 bg-error text-on-error rounded-full flex items-center justify-center font-label-sm text-[10px] font-bold">3</span>
+                {menu.href === '/manager/leaves-approval' && data?.managerStats?.pendingLeaves > 0 && (
+                  <span className="w-5 h-5 bg-error text-on-error rounded-full flex items-center justify-center font-label-sm text-[10px] font-bold">
+                    {data?.managerStats?.pendingLeaves}
+                  </span>
                 )}
               </Link>
             ))}

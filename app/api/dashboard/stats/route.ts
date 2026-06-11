@@ -1,11 +1,61 @@
 import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-export async function GET() {
-  // Trả về dữ liệu mẫu (Mock data) cho Dashboard
+const prisma = new PrismaClient();
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const locationId = searchParams.get('locationId');
+
+  // Lấy danh sách locations cho Dropdown
+  const locations = await prisma.location.findMany();
+
+  // Tạo bộ lọc theo chi nhánh (Nếu có locationId thì lọc, không thì đếm toàn bộ)
+  const whereLocation = locationId ? { location_id: parseInt(locationId) } : {};
+
+  // Lấy thời gian hôm nay (UTC+7)
+  const nowUtc = new Date();
+  const utc7Time = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  const todayStr = utc7Time.toISOString().split('T')[0];
+  const today = new Date(`${todayStr}T00:00:00.000Z`);
+
+  // Truy vấn Realtime Data
+  const totalStaff = await prisma.user.count({
+    where: { role_id: { not: 'admin' }, ...whereLocation }
+  });
+
+  const attendancesToday = await prisma.attendance.findMany({
+    where: { 
+      work_date: today,
+      user: whereLocation
+    },
+    include: { user: true }
+  });
+
+  const presentStaff = attendancesToday.length;
+  const lateCount = attendancesToday.filter(a => a.status === 'late').length;
+  const leaveCount = attendancesToday.filter(a => a.status === 'Nghỉ phép (P)').length;
+
+  const pendingLeaves = await prisma.leaveRequest.count({
+    where: { 
+      status: 'Pending',
+      user: whereLocation
+    }
+  });
+
+  // Trả về dữ liệu
   const dashboardData = {
+    managerStats: {
+      totalStaff,
+      presentStaff,
+      lateCount,
+      leaveCount,
+      pendingLeaves
+    },
+    locations,
     shift: {
       name: "Ca Sáng (HC-01)",
-      progress: 55, // 55%
+      progress: 55,
       startTime: "08:00 AM",
       expectedEndTime: "17:00 PM"
     },
@@ -15,12 +65,7 @@ export async function GET() {
       remaining: 12.5
     },
     attendanceHistory: [
-      { id: 1, date: "Hôm nay, 24/02", shift: "Sáng (HC-01)", checkIn: "08:02 AM", checkOut: "--:--", totalHours: "4.5h", status: "Bình thường", statusType: "normal" },
-      { id: 2, date: "Chủ Nhật, 23/02", shift: "--", checkIn: "--", checkOut: "--", totalHours: "0.0h", status: "Ngày nghỉ", statusType: "off" },
-      { id: 3, date: "Thứ Bảy, 22/02", shift: "Sáng (HC-01)", checkIn: "08:15 AM", checkOut: "12:00 PM", totalHours: "4.0h", status: "Đi muộn", statusType: "late" },
-      { id: 4, date: "Thứ Sáu, 21/02", shift: "Full-time", checkIn: "07:55 AM", checkOut: "17:05 PM", totalHours: "8.5h", status: "Đúng giờ", statusType: "normal" },
-      { id: 5, date: "Thứ Năm, 20/02", shift: "Full-time", checkIn: "08:00 AM", checkOut: "17:30 PM", totalHours: "9.0h", status: "Đúng giờ", statusType: "normal" },
-      { id: 6, date: "Thứ Tư, 19/02", shift: "Nghỉ phép", checkIn: "--", checkOut: "--", totalHours: "0.0h", status: "Phép năm", statusType: "leave" }
+      { id: 1, date: "Hôm nay", shift: "Sáng (HC-01)", checkIn: "08:02 AM", checkOut: "--:--", totalHours: "4.5h", status: "Bình thường", statusType: "normal" }
     ]
   };
 

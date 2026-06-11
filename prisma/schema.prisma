@@ -6,50 +6,63 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id             Int              @id @default(autoincrement())
-  name           String           @db.VarChar(255)
-  role_id        String           @db.VarChar(255)
-  manager_id     Int?
-  join_date      DateTime         @db.Date
-  face_data      String?          @db.Text
-  
+  id            Int      @id @default(autoincrement())
+  employee_code String?  @unique @db.VarChar(50)
+  name          String   @db.VarChar(255)
+  role_id       String   @db.VarChar(255)
+  manager_id    Int?
+  location_id   Int?     // Thuộc chi nhánh/phòng ban nào
+  join_date     DateTime @db.Date
+  face_data     String?  @db.Text
+  password      String?  @db.VarChar(255)
+
   // Relations
   attendances    Attendance[]
   leave_balances LeaveBalance[]
   leave_requests LeaveRequest[]
   audit_logs     AuditLog[]
-  
-  manager        User?            @relation("UserManager", fields: [manager_id], references: [id])
-  subordinates   User[]           @relation("UserManager")
-  
-  approved_leaves LeaveRequest[]  @relation("Approver")
+  schedules      EmployeeSchedule[]
 
+  manager      User?  @relation("UserManager", fields: [manager_id], references: [id])
+  subordinates User[] @relation("UserManager")
+
+  location     Location? @relation(fields: [location_id], references: [id])
+
+  approved_leaves LeaveRequest[] @relation("Approver")
+
+  @@index([role_id])
+  @@index([location_id])
   @@map("users")
 }
 
 model Location {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  latitude  Decimal  @db.Decimal(10, 8)
-  longitude Decimal  @db.Decimal(11, 8)
-  radius    Int      @default(50)
+  id        Int     @id @default(autoincrement())
+  name      String  @db.VarChar(255)
+  latitude  Decimal @db.Decimal(10, 8)
+  longitude Decimal @db.Decimal(11, 8)
+  radius    Int     @default(50)
+
+  users     User[]
 
   @@map("locations")
 }
 
 model Shift {
-  id         Int          @id @default(autoincrement())
-  shift_name String       @db.VarChar(255)
-  start_time DateTime     @db.Time()
-  end_time   DateTime     @db.Time()
-  
+  id         Int      @id @default(autoincrement())
+  shift_name String   @db.VarChar(255)
+  start_time DateTime @db.Time()
+  end_time   DateTime @db.Time()
+
   // Relations
-  attendances Attendance[]
+  attendances    Attendance[]
+  leave_requests LeaveRequest[]
+  schedules      EmployeeSchedule[]
 
   @@map("shifts")
 }
@@ -62,10 +75,12 @@ model Attendance {
   check_in_actual  DateTime? @db.Timestamp()
   check_out_actual DateTime? @db.Timestamp()
   status           String    @db.VarChar(50)
-  
-  user             User      @relation(fields: [user_id], references: [id])
-  shift            Shift     @relation(fields: [shift_id], references: [id])
 
+  user  User  @relation(fields: [user_id], references: [id])
+  shift Shift @relation(fields: [shift_id], references: [id])
+
+  @@unique([user_id, work_date, shift_id])
+  @@index([user_id, work_date])
   @@map("attendance")
 }
 
@@ -74,8 +89,8 @@ model LeaveBalance {
   year       Int
   total_days Decimal @db.Decimal(5, 2)
   used_days  Decimal @db.Decimal(5, 2)
-  
-  user       User    @relation(fields: [user_id], references: [id])
+
+  user User @relation(fields: [user_id], references: [id])
 
   @@id([user_id, year])
   @@map("leave_balances")
@@ -90,10 +105,14 @@ model LeaveRequest {
   end_date       DateTime @db.Date
   status         String   @db.VarChar(50)
   approver_id    Int?
-  
-  user           User     @relation(fields: [user_id], references: [id])
-  approver       User?    @relation("Approver", fields: [approver_id], references: [id])
+  shift_id       Int?
 
+  user     User   @relation(fields: [user_id], references: [id])
+  approver User?  @relation("Approver", fields: [approver_id], references: [id])
+  shift    Shift? @relation(fields: [shift_id], references: [id])
+
+  @@index([approver_id, status])
+  @@index([user_id, start_date, end_date])
   @@map("leave_requests")
 }
 
@@ -102,8 +121,22 @@ model AuditLog {
   action     String   @db.Text
   user_id    Int?
   created_at DateTime @default(now()) @db.Timestamp()
-  
-  user       User?    @relation(fields: [user_id], references: [id])
+
+  user User? @relation(fields: [user_id], references: [id])
 
   @@map("audit_logs")
+}
+
+model EmployeeSchedule {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  shift_id   Int
+  work_date  DateTime @db.Date
+  
+  user       User     @relation(fields: [user_id], references: [id])
+  shift      Shift    @relation(fields: [shift_id], references: [id])
+
+  @@unique([user_id, work_date])
+  @@index([work_date])
+  @@map("employee_schedules")
 }
