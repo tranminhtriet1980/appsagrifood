@@ -617,13 +617,18 @@ function StaffAttendancePage({ router, user }: { router: any, user: any }) {
           Bấm để {punchType === 'in' ? 'Check-in' : 'Check-out'}
         </span>
 
-        {/* Đăng ký khuôn mặt (nếu chưa có) */}
-        {profile && !profile.hasFace && (
-          <button onClick={handleRegisterFace} disabled={busy || !modelReady}
-            className="mt-4 px-5 py-2.5 rounded-full bg-orange-500/15 border border-orange-400/40 text-orange-400 font-bold text-[13px] flex items-center gap-2 disabled:opacity-40">
-            <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
-            Đăng ký khuôn mặt (làm 1 lần)
-          </button>
+        {/* Đăng ký / đăng ký lại khuôn mặt — luôn hiển thị */}
+        <button onClick={handleRegisterFace} disabled={busy || !modelReady}
+          className={`mt-4 px-5 py-2.5 rounded-full font-bold text-[13px] flex items-center gap-2 disabled:opacity-40 border ${
+            profile?.hasFace
+              ? 'bg-surface-container border-outline-variant text-on-surface-variant'
+              : 'bg-orange-500/15 border-orange-400/40 text-orange-400'
+          }`}>
+          <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+          {profile?.hasFace ? 'Đăng ký lại khuôn mặt' : 'Đăng ký khuôn mặt (làm 1 lần)'}
+        </button>
+        {!modelReady && (
+          <span className="mt-1 text-[11px] text-on-surface-variant">Đang tải mô-đun nhận diện…</span>
         )}
 
         {/* Thông tin site + GPS + ca */}
