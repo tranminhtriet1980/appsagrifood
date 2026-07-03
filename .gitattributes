@@ -1,0 +1,4 @@
+# Ép LF cho các script chạy trên Linux (tránh lỗi CRLF khi chạy trong Docker/server)
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+gradlew text eol=lf

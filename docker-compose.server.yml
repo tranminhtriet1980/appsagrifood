@@ -1,0 +1,37 @@
+# Chạy TOÀN BỘ (app + database) bằng Docker trên server.
+# Lệnh trên server:   docker compose -f docker-compose.server.yml up -d --build
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sagri_hrm_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Sagri@2026
+      POSTGRES_DB: sagri_hrm
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build: .
+    container_name: sagri_hrm_app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # DB nội bộ trong mạng Docker: host = tên service "postgres", cổng 5432, @ mã hoá thành %40
+      DATABASE_URL: "postgresql://postgres:Sagri%402026@postgres:5432/sagri_hrm?schema=public"
+      DIRECT_URL: "postgresql://postgres:Sagri%402026@postgres:5432/sagri_hrm?schema=public"
+      # ĐỔI chuỗi này thành chuỗi ngẫu nhiên dài khi dùng thật:
+      JWT_SECRET: "doi-thanh-chuoi-ngau-nhien-dai-tren-server"
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
