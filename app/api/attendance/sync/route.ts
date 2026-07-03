@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { getSession } from '@/lib/auth';
+import { recordPunch } from '@/lib/attendance-core';
 
-const prisma = new PrismaClient();
-
+// Đồng bộ hàng loạt các lượt chấm công đã lưu offline (IndexedDB) khi có mạng lại
 export async function POST(request: Request) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Bạn chưa đăng nhập' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { records } = body;
 
@@ -12,80 +17,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Payload không hợp lệ' }, { status: 400 });
     }
 
-    let syncedCount = 0;
+    let synced = 0;
+    const errors: string[] = [];
 
     for (const record of records) {
-      const { timestamp, userId } = record;
-      
-      if (!timestamp || !userId) continue;
+      const { timestamp, type, lat, lng, imageBase64, faceMatchScore } = record;
+      if (!timestamp) continue;
 
-      const clientTime = new Date(timestamp);
-      if (isNaN(clientTime.getTime())) continue;
-
-      const utc7Time = new Date(clientTime.getTime() + 7 * 60 * 60 * 1000);
-      const workDateStr = utc7Time.toISOString().split('T')[0];
-      const workDate = new Date(`${workDateStr}T00:00:00.000Z`);
-
-      let parsedUserId = parseInt(userId.replace(/\D/g, '')) || 1; 
-
-      let assignedShiftId = 1;
-      let shiftStartHour = 8;
-      let shiftStartMin = 0;
-
-      const schedule = await prisma.employeeSchedule.findUnique({
-        where: {
-          user_id_work_date: {
-            user_id: parsedUserId,
-            work_date: workDate
-          }
-        },
-        include: { shift: true }
+      const result = await recordPunch({
+        userId: session.id, // luôn theo người đang đăng nhập
+        type: type === 'out' ? 'out' : 'in',
+        timestamp,
+        lat: typeof lat === 'number' ? lat : null,
+        lng: typeof lng === 'number' ? lng : null,
+        imageBase64: imageBase64 || null,
+        faceMatchScore: typeof faceMatchScore === 'number' ? faceMatchScore : null,
       });
 
-      if (schedule) {
-        assignedShiftId = schedule.shift_id;
-        const shiftStartTime = new Date(schedule.shift.start_time);
-        shiftStartHour = shiftStartTime.getUTCHours();
-        shiftStartMin = shiftStartTime.getUTCMinutes();
-      }
-
-      let currentStatus = 'ontime';
-      const clientHour = clientTime.getHours();
-      const clientMin = clientTime.getMinutes();
-      const isLate = (clientHour > shiftStartHour) || (clientHour === shiftStartHour && clientMin > shiftStartMin + 5);
-      
-      if (isLate) currentStatus = 'late';
-
-      const existingRecord = await prisma.attendance.findFirst({
-        where: {
-          user_id: parsedUserId,
-          work_date: workDate,
-          shift_id: assignedShiftId
-        }
-      });
-
-      if (!existingRecord) {
-        await prisma.attendance.create({
-          data: {
-            user_id: parsedUserId,
-            shift_id: assignedShiftId,
-            work_date: workDate,
-            check_in_actual: clientTime,
-            status: currentStatus
-          }
-        });
-      } else {
-        await prisma.attendance.update({
-          where: { id: existingRecord.id },
-          data: {
-            check_out_actual: clientTime
-          }
-        });
-      }
-      syncedCount++;
+      if (result.ok) synced++;
+      else errors.push(result.message);
     }
 
-    return NextResponse.json({ success: true, synced: syncedCount });
+    return NextResponse.json({ success: true, synced, errors });
   } catch (err) {
     console.error('Lỗi Bulk Sync:', err);
     return NextResponse.json({ error: 'Lỗi đồng bộ máy chủ' }, { status: 500 });

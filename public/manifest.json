@@ -1,0 +1,16 @@
+{
+  "name": "Sagrifood HRM — Chấm công",
+  "short_name": "Sagri Chấm công",
+  "description": "Chấm công GPS + khuôn mặt cho nhân viên siêu thị Sagrifood",
+  "start_url": "/attendance",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1326",
+  "theme_color": "#4f46e5",
+  "lang": "vi",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

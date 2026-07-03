@@ -1,12 +1,11 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: sagri_hrm_postgres
     restart: always
     ports:
-      - "5432:5432"
+      # Cổng 5432 trên máy đã bị PostgreSQL native chiếm -> map ra 5433
+      - "5433:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Sagri@2026

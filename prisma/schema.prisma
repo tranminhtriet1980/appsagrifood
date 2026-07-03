@@ -46,9 +46,10 @@ model Location {
   name      String  @db.VarChar(255)
   latitude  Decimal @db.Decimal(10, 8)
   longitude Decimal @db.Decimal(11, 8)
-  radius    Int     @default(50)
+  radius    Int     @default(100) // Bán kính cho phép chấm công quanh site (mét)
 
-  users     User[]
+  users       User[]
+  attendances Attendance[]
 
   @@map("locations")
 }
@@ -76,8 +77,26 @@ model Attendance {
   check_out_actual DateTime? @db.Timestamp()
   status           String    @db.VarChar(50)
 
-  user  User  @relation(fields: [user_id], references: [id])
-  shift Shift @relation(fields: [shift_id], references: [id])
+  // Site chấm công + toạ độ GPS thực tế
+  location_id        Int?
+  check_in_lat       Decimal? @db.Decimal(10, 8)
+  check_in_lng       Decimal? @db.Decimal(11, 8)
+  check_in_distance  Int? // Khoảng cách (mét) tới tâm site lúc check-in
+  check_out_lat      Decimal? @db.Decimal(10, 8)
+  check_out_lng      Decimal? @db.Decimal(11, 8)
+  check_out_distance Int?
+
+  // Đối chiếu giờ làm (08:00 - 17:00)
+  late_minutes  Int @default(0) // Số phút đi trễ so với giờ vào ca
+  early_minutes Int @default(0) // Số phút về sớm so với giờ tan ca
+
+  // Bằng chứng nhận diện khuôn mặt
+  check_in_photo   String?  @db.Text // Ảnh khuôn mặt lúc check-in (data URL)
+  face_match_score Decimal? @db.Decimal(5, 4) // Độ tương đồng khuôn mặt (0..1)
+
+  user     User      @relation(fields: [user_id], references: [id])
+  shift    Shift     @relation(fields: [shift_id], references: [id])
+  location Location? @relation(fields: [location_id], references: [id])
 
   @@unique([user_id, work_date, shift_id])
   @@index([user_id, work_date])

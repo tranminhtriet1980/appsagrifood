@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import { useAuthStore } from "@/store/useAuthStore";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "react-hot-toast";
 import { useTrueTime } from "@/hooks/useTrueTime";
 import ThemeToggle from "@/components/ThemeToggle";
+import { haversineDistance, FACE_MATCH_THRESHOLD } from "@/lib/attendance";
 
 // Helper: IndexedDB cho Offline Check-in
 const DB_NAME = 'HRM_OfflineDB';
@@ -95,17 +97,15 @@ const EMPLOYEES_MOCK = [
 
 type TabType = "Hôm nay" | "Tuần" | "Tháng";
 
-import useSWR from "swr";
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
   const [activeTab, setActiveTab] = useState<TabType>("Hôm nay");
-  
+
   // Áp dụng SWR để Polling real-time mỗi 5 giây
-  const { data, error, isLoading } = useSWR(
-    `/api/attendance/manager?tab=${activeTab}`, 
-    fetcher, 
+  const { data, isLoading } = useSWR(
+    `/api/attendance/manager?tab=${activeTab}`,
+    fetcher,
     { refreshInterval: 5000 }
   );
 
@@ -142,7 +142,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
 
       {/* TOP CONTROLS */}
       <div className="px-4 pt-4 space-y-4 max-w-4xl mx-auto w-full">
-        {/* Dropdown Địa điểm */}
         <button className="w-full flex items-center justify-between bg-surface-container-high border border-white/10 rounded-xl px-4 py-3 active:scale-[0.98] transition-transform">
           <div className="flex items-center gap-2 text-on-surface">
             <span className="material-symbols-outlined text-primary text-[20px]">location_on</span>
@@ -151,7 +150,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           <span className="material-symbols-outlined text-on-surface-variant">expand_more</span>
         </button>
 
-        {/* Toggle Tabs */}
         <div className="flex bg-surface-container-highest p-1 rounded-xl w-full">
           {["Hôm nay", "Tuần", "Tháng"].map((tab) => (
             <button
@@ -167,7 +165,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           ))}
         </div>
 
-        {/* Xuất Báo Cáo */}
         <button className="w-full flex items-center justify-center gap-2 bg-surface-container-high hover:bg-surface-container-highest border border-white/10 rounded-xl py-3 text-on-surface font-bold text-[14px] active:scale-[0.98] transition-transform">
           <span className="material-symbols-outlined text-primary text-[20px]">download</span>
           Xuất báo cáo
@@ -176,7 +173,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
 
       {/* THỐNG KÊ KPI (2x2 Grid) */}
       <div className="px-4 py-6 grid grid-cols-2 gap-3 max-w-4xl mx-auto w-full">
-        {/* Tổng quân số */}
         <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-white/5 relative overflow-hidden">
           <div className="flex items-center gap-2 text-on-surface-variant mb-1">
             <span className="material-symbols-outlined text-[16px]">group</span>
@@ -187,7 +183,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           </div>
         </div>
 
-        {/* Đã check-in */}
         <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-white/5 relative overflow-hidden">
           <div className="flex items-center gap-2 text-on-surface-variant mb-1">
             <span className="material-symbols-outlined text-[16px]">door_front</span>
@@ -198,7 +193,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           </div>
         </div>
 
-        {/* Đi muộn */}
         <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-white/5 relative overflow-hidden border-l-4 border-l-orange-400">
           <div className="flex items-center gap-2 text-on-surface-variant mb-1">
             <span className="material-symbols-outlined text-[16px]">schedule</span>
@@ -209,7 +203,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           </div>
         </div>
 
-        {/* Chưa check-in */}
         <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-white/5 relative overflow-hidden border-l-4 border-l-error">
           <div className="flex items-center gap-2 text-on-surface-variant mb-1">
             <span className="material-symbols-outlined text-[16px]">person_off</span>
@@ -236,14 +229,18 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
           {!isLoading && employees.map((emp: any) => (
             <div key={emp.id} className="glass-card rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* Avatar */}
                 <div className="relative">
-                  <img src={emp.avatar} alt={emp.name} className="w-11 h-11 rounded-full object-cover border border-white/10" />
+                  {emp.avatar ? (
+                    <img src={emp.avatar} alt={emp.name} className="w-11 h-11 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold border border-white/10">
+                      {emp.name?.trim().split(/\s+/).slice(-2).map((w: string) => w[0]).join('').toUpperCase() || 'NV'}
+                    </div>
+                  )}
                   {emp.isOnline && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#131b2e] rounded-full"></div>
                   )}
                 </div>
-                {/* Info */}
                 <div className="flex flex-col">
                   <span className="font-bold text-[14px] text-on-surface">{emp.name}</span>
                   <span className="text-[11px] text-on-surface-variant mt-0.5">
@@ -251,7 +248,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
                   </span>
                 </div>
               </div>
-              {/* Right: Time & Badge */}
               <div className="flex flex-col items-end gap-1.5">
                 <span className="text-[11px] text-on-surface-variant font-medium">{emp.timeRange}</span>
                 {emp.status === "ontime" && (
@@ -275,7 +271,6 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
         </div>
       </div>
 
-      {/* FAB: Floating Action Button */}
       <button className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-[0_4px_20px_rgba(147,51,234,0.4)] active:scale-90 transition-transform z-40">
         <span className="material-symbols-outlined text-[28px]">add</span>
       </button>
@@ -285,397 +280,411 @@ function ManagerAttendancePage({ user, router }: { user: any, router: any }) {
   );
 }
 
+// ============================================================
+//  STAFF: Chấm công GPS + Khuôn mặt
+// ============================================================
+interface Profile {
+  id: number;
+  name: string;
+  employeeCode: string | null;
+  site: { id: number; name: string; latitude: number; longitude: number; radius: number } | null;
+  hasFace: boolean;
+  faceDescriptor: number[] | null;
+}
+
 function StaffAttendancePage({ router, user }: { router: any, user: any }) {
-  const [timeStr, setTimeStr] = useState("08:00:24");
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [timeStr, setTimeStr] = useState("--:--:--");
+  const [dateStr, setDateStr] = useState("");
+  const [busy, setBusy] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [successMsg, setSuccessMsg] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
+
+  const [punchType, setPunchType] = useState<'in' | 'out'>('in');
+  const [modelReady, setModelReady] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Custom hook đồng bộ thời gian máy chủ chống gian lận
   const { getTrueTime } = useTrueTime();
 
-  // Khởi tạo Camera
-  useEffect(() => {
-    let stream: MediaStream | null = null;
+  const site = profile?.site || null;
+  const inRange = site && distance != null ? distance <= site.radius : null;
 
-    const startCamera = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err: any) {
-        console.error("Lỗi khởi tạo camera:", err);
-        toast.error("Không thể truy cập Camera. Vui lòng cấp quyền cho trình duyệt!", {
-          duration: 4000,
-          style: { background: '#ef4444', color: '#fff' }
-        });
-      }
-    };
-
-    startCamera();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
+  // ---- Tải hồ sơ (site + khuôn mặt đã đăng ký) ----
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) setProfile(await res.json());
+    } catch { /* ignore */ }
   }, []);
 
-  // Cập nhật Live Clock
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  // ---- Khởi tạo Camera ----
   useEffect(() => {
-    const updateClock = () => {
-      // Dùng hàm getTrueTime() thay vì new Date() để luôn có giờ máy chủ chuẩn
+    let stream: MediaStream | null = null;
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch (err) {
+        console.error("Lỗi camera:", err);
+        toast.error("Không thể truy cập Camera. Vui lòng cấp quyền!", { duration: 4000 });
+      }
+    })();
+    return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  // ---- Tải model nhận diện khuôn mặt ----
+  useEffect(() => {
+    (async () => {
+      try {
+        const face = await import("@/lib/face-client");
+        await face.loadFaceModels();
+        setModelReady(true);
+      } catch (e) {
+        console.error("Lỗi tải model khuôn mặt:", e);
+        toast.error("Không tải được mô-đun nhận diện khuôn mặt");
+      }
+    })();
+  }, []);
+
+  // ---- Theo dõi GPS liên tục ----
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+      },
+      (err) => console.warn("GPS error:", err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  // ---- Tính khoảng cách tới site khi GPS/site đổi ----
+  useEffect(() => {
+    if (gps && site) {
+      setDistance(haversineDistance(gps.lat, gps.lng, site.latitude, site.longitude));
+    }
+  }, [gps, site]);
+
+  // ---- Đồng hồ + trạng thái mạng ----
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const tick = () => {
       const now = getTrueTime();
-      const time = now.toLocaleTimeString('en-GB', { hour12: false });
-      setTimeStr(time);
+      setTimeStr(now.toLocaleTimeString('en-GB', { hour12: false }));
+      setDateStr(now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: 'long' }));
     };
-    updateClock();
-    const timer = setInterval(updateClock, 1000);
+    tick();
+    const timer = setInterval(tick, 1000);
 
-    // Bắt sự kiện mạng Offline / Online
-    const handleOffline = () => {
-      setIsOffline(true);
-      toast("⚠️ Đã mất kết nối mạng. Chế độ Offline được kích hoạt.", {
-        style: { background: '#f59e0b', color: '#fff' }
-      });
-    };
-
+    const handleOffline = () => { setIsOffline(true); toast("⚠️ Mất mạng — chuyển sang chế độ Offline"); };
     const handleOnline = async () => {
       setIsOffline(false);
       try {
         const pending = await getOfflineCheckins();
         if (pending.length > 0) {
-          toast.loading(`Đang đồng bộ ${pending.length} bản ghi chấm công offline...`, { id: 'sync' });
-          
+          toast.loading(`Đang đồng bộ ${pending.length} bản ghi offline...`, { id: 'sync' });
           const res = await fetch('/api/attendance/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ records: pending })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: pending }),
           });
-          
-          if (res.ok) {
-            await clearOfflineCheckins();
-            toast.success(`Đồng bộ hoàn tất ${pending.length} bản ghi lên máy chủ.`, { id: 'sync' });
-          } else {
-            throw new Error('Sync API Error');
-          }
+          if (res.ok) { await clearOfflineCheckins(); toast.success('Đồng bộ hoàn tất', { id: 'sync' }); }
+          else throw new Error('sync fail');
         }
-      } catch (err) {
-        console.error("Lỗi Bulk Sync:", err);
-        toast.error('Lỗi đồng bộ dữ liệu. Sẽ thử lại sau.', { id: 'sync' });
-      }
+      } catch { toast.error('Lỗi đồng bộ, sẽ thử lại sau', { id: 'sync' }); }
     };
-
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-
     return () => {
       clearInterval(timer);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, []);
+  }, [getTrueTime]);
 
-  const handleCheckIn = async () => {
-    setIsCheckingIn(true);
+  // ---- Chụp descriptor + ảnh từ video ----
+  const captureFace = async (): Promise<{ descriptor: Float32Array; photo: string } | null> => {
+    if (!videoRef.current) return null;
+    const face = await import("@/lib/face-client");
+    const descriptor = await face.getDescriptorFromMedia(videoRef.current);
+    if (!descriptor) return null;
 
-    // 1. Capture ảnh từ video feed
-    let base64Image = '';
-    if (videoRef.current) {
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth || 720;
-      canvas.height = videoRef.current.videoHeight || 1280;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        // Chụp ảnh (Cần lật ngược lại hình vì video đang bị lật mirror)
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        base64Image = canvas.toDataURL("image/jpeg", 0.7);
-      }
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    let photo = "";
+    if (ctx) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      photo = canvas.toDataURL("image/jpeg", 0.6);
     }
+    return { descriptor, photo };
+  };
 
-    // Sử dụng giờ hệ thống chuẩn làm timestamp
-    const trueTimestamp = getTrueTime().toISOString();
-
-    let realLocation = 'Không xác định';
-    if ("geolocation" in navigator) {
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { 
-             enableHighAccuracy: true,
-             timeout: 5000,
-             maximumAge: 0
-          });
-        });
-        
-        // 3. Fake GPS Detection
-        const accuracy = position.coords.accuracy;
-        if (accuracy === 0 || accuracy > 2000) {
-           toast.error(`Cảnh báo: Tọa độ GPS có dấu hiệu bất thường (Sai số: ${Math.round(accuracy)}m). Vui lòng tắt Fake GPS!`);
-           setIsCheckingIn(false);
-           return;
-        }
-
-        realLocation = `GPS: ${position.coords.latitude}, ${position.coords.longitude} (±${Math.round(accuracy)}m)`;
-      } catch(e) {
-        realLocation = 'Văn phòng Bitexco (Mặc định)';
-      }
-    } else {
-      realLocation = 'Văn phòng Bitexco (Mặc định)';
-    }
-
-    const checkinData = {
-      id: Date.now().toString(),
-      userId: user?.id || 'staff',
-      userName: user?.name || 'Nhân viên',
-      location: realLocation,
-      timestamp: trueTimestamp,
-      type: 'check-in',
-      imageBase64: base64Image || 'data:image/jpeg;base64,...',
-      status: isOffline ? 'pending' : 'success'
-    };
-
-    // 2. LƯU LỊCH SỬ CHẤM CÔNG VÀO LOCALSTORAGE
+  // ---- Đăng ký khuôn mặt ----
+  const handleRegisterFace = async () => {
+    if (!modelReady) { toast("Đang tải mô-đun khuôn mặt, đợi chút..."); return; }
+    setBusy(true);
+    toast.loading("Đang quét khuôn mặt...", { id: 'reg' });
     try {
-      const existingLogs = JSON.parse(localStorage.getItem('attendance_logs') || '[]');
-      existingLogs.unshift(checkinData);
-      localStorage.setItem('attendance_logs', JSON.stringify(existingLogs));
-    } catch (e) {
-      console.error("Lỗi lưu localStorage", e);
+      const cap = await captureFace();
+      if (!cap) { toast.error("Không phát hiện khuôn mặt. Đưa mặt vào khung và thử lại.", { id: 'reg' }); return; }
+      const res = await fetch('/api/face/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descriptor: Array.from(cap.descriptor) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Đăng ký thất bại');
+      toast.success("Đăng ký khuôn mặt thành công!", { id: 'reg' });
+      await loadProfile();
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi đăng ký khuôn mặt", { id: 'reg' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---- Chấm công (check-in / check-out) ----
+  const handlePunch = async () => {
+    if (busy) return;
+
+    if (!profile?.hasFace) {
+      toast.error("Bạn chưa đăng ký khuôn mặt. Hãy bấm 'Đăng ký khuôn mặt' trước.");
+      return;
+    }
+    if (!modelReady) { toast("Đang tải mô-đun khuôn mặt, đợi chút..."); return; }
+
+    // Chặn sớm nếu ngoài vùng (server vẫn kiểm tra lại)
+    if (site && distance != null && distance > site.radius) {
+      toast.error(`Bạn đang cách ${site.name} ~${Math.round(distance)}m (cho phép ${site.radius}m).`);
+      return;
     }
 
-    if (isOffline) {
-      // Lưu vào IndexedDB
-      await saveCheckinOffline(checkinData);
-      setTimeout(() => {
-        setIsCheckingIn(false);
-        toast(`✅ Đã lưu chấm công lúc ${timeStr}. Sẽ tải lên hệ thống khi có mạng lại.`, {
-          duration: 4000,
-          style: { background: '#10B981', color: '#fff' }
-        });
-        setShowSuccess(true);
-      }, 1000);
-    } else {
-      // Gọi API thực tế
-      try {
-        const response = await fetch('/api/attendance/check-in', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(checkinData)
-        });
+    setBusy(true);
+    toast.loading(punchType === 'in' ? "Đang xác thực khuôn mặt để Check-in..." : "Đang xác thực để Check-out...", { id: 'punch' });
 
-        if (!response.ok) throw new Error('Check-in failed on server');
+    try {
+      // 1. Khuôn mặt
+      const cap = await captureFace();
+      if (!cap) { toast.error("Không phát hiện khuôn mặt. Vui lòng thử lại.", { id: 'punch' }); setBusy(false); return; }
 
-        setIsCheckingIn(false);
-        setShowSuccess(true);
-      } catch (err) {
-        setIsCheckingIn(false);
-        toast.error("Lỗi khi kết nối đến máy chủ", { style: { background: '#ef4444', color: '#fff' } });
+      const face = await import("@/lib/face-client");
+      const dist = face.faceDistance(cap.descriptor, profile.faceDescriptor!);
+      if (dist > FACE_MATCH_THRESHOLD) {
+        toast.error(`Khuôn mặt không khớp (sai lệch ${dist.toFixed(2)}). Đây có đúng là bạn không?`, { id: 'punch' });
+        setBusy(false);
+        return;
       }
+      const matchScore = Math.max(0, 1 - dist);
+
+      // 2. GPS mới nhất
+      let coords = gps;
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 })
+        );
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        setGps(coords);
+      } catch { /* dùng gps đang có */ }
+
+      const payload = {
+        type: punchType,
+        timestamp: getTrueTime().toISOString(),
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        accuracy: coords?.accuracy ?? null,
+        imageBase64: cap.photo,
+        faceMatchScore: matchScore,
+      };
+
+      // 3. Offline -> lưu tạm; Online -> gọi API
+      if (isOffline || !navigator.onLine) {
+        await saveCheckinOffline({ id: Date.now().toString(), ...payload });
+        toast.success("Đã lưu chấm công offline, sẽ đồng bộ khi có mạng.", { id: 'punch' });
+        setSuccessMsg(`Đã lưu ${punchType === 'in' ? 'Check-in' : 'Check-out'} lúc ${timeStr} (offline)`);
+        setShowSuccess(true);
+        setBusy(false);
+        return;
+      }
+
+      const res = await fetch('/api/attendance/check-in', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Chấm công thất bại", { id: 'punch', duration: 5000 }); setBusy(false); return; }
+
+      toast.success(data.message || "Chấm công thành công", { id: 'punch' });
+      setSuccessMsg(data.message || "Chấm công thành công");
+      setShowSuccess(true);
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi kết nối máy chủ", { id: 'punch' });
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleReset = () => {
-    setShowSuccess(false);
-    // Quay về Dashboard sau khi chấm công thành công
-    router.push("/dashboard");
-  };
+  const distanceLabel = distance != null ? `${Math.round(distance)}m` : "Đang định vị...";
 
   return (
-    <div className="bg-background text-on-surface selection:bg-primary/30 min-h-screen relative">
+    <div className="bg-background text-on-surface min-h-screen relative">
       <style dangerouslySetInnerHTML={{ __html: `
-        .glow-pulse {
-            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px 0px rgba(192, 193, 255, 0.1); }
-            50% { box-shadow: 0 0 40px 10px rgba(192, 193, 255, 0.3); }
-        }
-        .scan-line {
-            position: absolute;
-            width: 100%;
-            height: 2px;
-            background: #c0c1ff;
-            top: 0;
-            left: 0;
-            animation: scan 3s linear infinite;
-            opacity: 0.5;
-            box-shadow: 0 0 15px #c0c1ff;
-        }
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
-        }
+        .scan-line { position:absolute; width:100%; height:2px; background:#c0c1ff; top:0; left:0; animation:scan 3s linear infinite; opacity:.5; box-shadow:0 0 15px #c0c1ff; }
+        @keyframes scan { 0%{top:0} 100%{top:100%} }
       ` }} />
 
-      {/* Top Navigation */}
+      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-50 bg-background/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="flex items-center">
-            <span className="material-symbols-outlined text-primary">close</span>
-          </button>
+          <button onClick={() => router.push('/dashboard')}><span className="material-symbols-outlined text-primary">close</span></button>
           <h1 className="text-[24px] text-primary font-bold">Chấm công</h1>
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <div className="flex items-center gap-1 px-3 py-1 bg-surface-container rounded-full">
             {isOffline ? (
-              <>
-                <span className="material-symbols-outlined text-error text-[14px]">cloud_off</span>
-                <span className="text-[12px] font-medium text-error">Ngoại tuyến</span>
-              </>
+              <><span className="material-symbols-outlined text-error text-[14px]">cloud_off</span><span className="text-[12px] font-medium text-error">Offline</span></>
             ) : (
-              <>
-                <span className="material-symbols-outlined text-status-success text-[14px]">cloud_done</span>
-                <span className="text-[12px] font-medium text-status-success">Đồng bộ</span>
-              </>
+              <><span className="material-symbols-outlined text-status-success text-[14px]">cloud_done</span><span className="text-[12px] font-medium text-status-success">Online</span></>
             )}
           </div>
-          <span className="material-symbols-outlined text-on-surface-variant">help_outline</span>
         </div>
       </header>
 
-      {/* Cảnh báo rớt mạng */}
-      {isOffline && (
-        <div className="fixed top-16 left-0 right-0 bg-[#f59e0b] text-white px-4 py-2 text-sm font-bold flex items-center justify-center gap-2 z-40 animate-in slide-in-from-top-2">
-          <span className="material-symbols-outlined text-[18px]">wifi_off</span>
-          ⚠️ Mất kết nối mạng. Ảnh chấm công sẽ được lưu tạm vào máy.
-        </div>
-      )}
-
-      <main className={`min-h-screen pt-20 pb-28 px-6 flex flex-col items-center ${isOffline ? 'mt-8' : ''}`}>
-        {/* Live Clock Section */}
-        <section className="w-full text-center mb-8">
-          <div className="text-[32px] md:text-[48px] font-bold text-primary tracking-tighter" id="live-clock">
-            {timeStr}
-          </div>
-          <p className="text-[12px] font-medium text-on-surface-variant uppercase tracking-widest mt-1">
-            Thứ Hai, 22 Tháng 5
-          </p>
+      <main className="min-h-screen pt-20 pb-40 px-6 flex flex-col items-center">
+        {/* Live Clock */}
+        <section className="w-full text-center mb-6">
+          <div className="text-[40px] md:text-[48px] font-bold text-primary tracking-tighter">{timeStr}</div>
+          <p className="text-[12px] font-medium text-on-surface-variant uppercase tracking-widest mt-1 capitalize">{dateStr}</p>
         </section>
 
-        {/* Biometric / Scanner Preview Area */}
-        <section className="relative w-full aspect-square max-w-[320px] bg-surface-container rounded-xl overflow-hidden border border-outline-variant group">
+        {/* Toggle Check-in / Check-out */}
+        <div className="flex bg-surface-container-highest p-1 rounded-xl w-full max-w-[320px] mb-4">
+          {(['in', 'out'] as const).map((t) => (
+            <button key={t} onClick={() => setPunchType(t)}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-[14px] transition-all ${punchType === t ? (t === 'in' ? 'bg-status-success text-white shadow-lg' : 'bg-primary text-on-primary shadow-lg') : 'text-on-surface-variant'}`}>
+              {t === 'in' ? 'Vào ca (Check-in)' : 'Tan ca (Check-out)'}
+            </button>
+          ))}
+        </div>
+
+        {/* Camera */}
+        <section className="relative w-full aspect-square max-w-[320px] bg-surface-container rounded-xl overflow-hidden border border-outline-variant">
           <div className="absolute inset-0 flex items-center justify-center bg-black">
             <div className="scan-line z-10"></div>
-            {/* Camera Feed */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover transform scale-x-[-1]"
-            />
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
           </div>
-          {/* Floating ID Box */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-48 h-48 border-2 border-primary/50 rounded-xl flex items-center justify-center bg-primary/5">
               <span className="material-symbols-outlined text-primary text-5xl opacity-40">face</span>
             </div>
           </div>
-          {/* Status Indicator Overlay */}
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-surface-container-highest/90 backdrop-blur p-3 rounded-lg border border-outline/20">
+          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-surface-container-highest/90 backdrop-blur p-2.5 rounded-lg border border-outline/20">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-status-success animate-pulse"></div>
-              <span className="text-[14px] text-on-surface">Đã nhận diện khuôn mặt</span>
+              <div className={`w-2 h-2 rounded-full ${modelReady ? 'bg-status-success animate-pulse' : 'bg-orange-400'}`}></div>
+              <span className="text-[13px] text-on-surface">{modelReady ? 'Sẵn sàng nhận diện' : 'Đang tải nhận diện...'}</span>
             </div>
-            <span className="material-symbols-outlined text-status-success" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            {profile?.hasFace
+              ? <span className="material-symbols-outlined text-status-success text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+              : <span className="text-[11px] text-orange-400 font-bold">Chưa đăng ký</span>}
           </div>
         </section>
 
-        {/* Nút chụp ngay dưới Camera */}
-        <button
-          onClick={handleCheckIn}
-          disabled={isCheckingIn}
-          className="mt-6 w-16 h-16 rounded-full bg-primary flex items-center justify-center border-4 border-primary/30 shadow-[0_0_20px_rgba(192,193,255,0.4)] active:scale-90 transition-all disabled:opacity-50"
-        >
-          {isCheckingIn ? (
-            <svg className="animate-spin h-6 w-6 text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        {/* Nút chấm công */}
+        <button onClick={handlePunch} disabled={busy || !modelReady}
+          className={`mt-6 w-20 h-20 rounded-full flex items-center justify-center border-4 shadow-lg active:scale-90 transition-all disabled:opacity-40 ${punchType === 'in' ? 'bg-status-success border-status-success/30' : 'bg-primary border-primary/30'}`}>
+          {busy ? (
+            <svg className="animate-spin h-7 w-7 text-white" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           ) : (
-            <span className="material-symbols-outlined text-[32px] text-on-primary">photo_camera</span>
+            <span className="material-symbols-outlined text-[36px] text-white">{punchType === 'in' ? 'login' : 'logout'}</span>
           )}
         </button>
-        <span className="text-[12px] text-on-surface-variant mt-2 font-bold uppercase tracking-widest">Bấm để chấm công</span>
+        <span className="text-[12px] text-on-surface-variant mt-2 font-bold uppercase tracking-widest">
+          Bấm để {punchType === 'in' ? 'Check-in' : 'Check-out'}
+        </span>
 
-        {/* Location & Meta Section */}
+        {/* Đăng ký khuôn mặt (nếu chưa có) */}
+        {profile && !profile.hasFace && (
+          <button onClick={handleRegisterFace} disabled={busy || !modelReady}
+            className="mt-4 px-5 py-2.5 rounded-full bg-orange-500/15 border border-orange-400/40 text-orange-400 font-bold text-[13px] flex items-center gap-2 disabled:opacity-40">
+            <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+            Đăng ký khuôn mặt (làm 1 lần)
+          </button>
+        )}
+
+        {/* Thông tin site + GPS + ca */}
         <section className="w-full mt-8 space-y-4 max-w-[500px]">
           <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant flex items-center gap-4">
             <div className="w-12 h-12 bg-primary-container/20 rounded-full flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary">location_on</span>
+              <span className="material-symbols-outlined text-primary">storefront</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-[12px] font-medium text-on-surface-variant">Vị trí hiện tại</h3>
-              <p className="text-[16px] text-on-surface truncate">Văn phòng Bitexco, TP. Hồ Chí Minh</p>
+              <h3 className="text-[12px] font-medium text-on-surface-variant">Site chấm công</h3>
+              <p className="text-[16px] text-on-surface truncate">{site ? site.name : 'Chưa gán site'}</p>
+              <p className="text-[11px] text-on-surface-variant">Cách {distanceLabel}{gps ? ` · GPS ±${Math.round(gps.accuracy)}m` : ''}</p>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-[12px] font-medium text-status-success bg-status-success/10 px-2 py-1 rounded">Trong vùng</span>
+              {inRange === null ? (
+                <span className="text-[12px] font-medium text-on-surface-variant bg-surface-container px-2 py-1 rounded">...</span>
+              ) : inRange ? (
+                <span className="text-[12px] font-medium text-status-success bg-status-success/10 px-2 py-1 rounded">Trong vùng</span>
+              ) : (
+                <span className="text-[12px] font-medium text-error bg-error/10 px-2 py-1 rounded">Ngoài vùng</span>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
-              <h3 className="text-[12px] font-medium text-on-surface-variant mb-1">Ca làm việc</h3>
-              <p className="text-[16px] font-bold text-on-surface">Ca Sáng (08:00 - 17:30)</p>
+              <h3 className="text-[12px] font-medium text-on-surface-variant mb-1">Nhân viên</h3>
+              <p className="text-[15px] font-bold text-on-surface truncate">{profile?.name || user?.name || '—'}</p>
+              <p className="text-[11px] text-on-surface-variant">{profile?.employeeCode || ''}</p>
             </div>
             <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
-              <h3 className="text-[12px] font-medium text-on-surface-variant mb-1">Trạng thái</h3>
-              <p className="text-[16px] font-bold text-tertiary">Chưa Check-in</p>
+              <h3 className="text-[12px] font-medium text-on-surface-variant mb-1">Giờ làm</h3>
+              <p className="text-[15px] font-bold text-on-surface">08:00 - 17:00</p>
             </div>
           </div>
         </section>
 
-        {/* Main Action Button (Removed duplicate button, kept bottom links) */}
-        <section className="fixed bottom-10 left-6 right-6 flex flex-col gap-4 max-w-[500px] mx-auto z-40">
-          <button className="w-full py-4 rounded-full border border-outline-variant flex items-center justify-center gap-2 text-on-surface-variant hover:bg-surface-container transition-colors bg-background/80 backdrop-blur-md">
-            <span className="material-symbols-outlined text-[20px]">edit_note</span>
-            <span className="text-[16px]">Ghi chú hoặc Đính kèm hình ảnh</span>
-          </button>
-
-          <button
-            onClick={() => router.push('/history')}
-            className="w-full mt-2 text-primary text-[14px] font-medium flex items-center justify-center gap-1 hover:underline"
-          >
-            <span>Xem lịch sử chấm công</span>
-            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-          </button>
-        </section>
+        <button onClick={() => router.push('/history')} className="mt-8 text-primary text-[14px] font-medium flex items-center gap-1 hover:underline">
+          <span>Xem lịch sử chấm công của tôi</span>
+          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
       </main>
 
-      {/* Success Feedback Overlay */}
+      {/* Success overlay */}
       {showSuccess && (
-        <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex items-center justify-center p-6 text-center animate-in fade-in duration-300">
-          <div className="flex flex-col items-center animate-in zoom-in-95 duration-500">
-            <div className="w-32 h-32 bg-status-success rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-status-success/40">
-              <span className="material-symbols-outlined text-white text-7xl">check</span>
+        <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+          <div className="flex flex-col items-center">
+            <div className="w-28 h-28 bg-status-success rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-status-success/40">
+              <span className="material-symbols-outlined text-white text-6xl">check</span>
             </div>
-            <h2 className="text-[32px] md:text-[48px] font-bold text-on-surface mb-2">Thành công!</h2>
-            <p className="text-[16px] text-on-surface-variant mb-10 max-w-xs leading-relaxed">
-              Bạn đã hoàn tất Check-in vào lúc <span className="font-bold text-on-surface">{timeStr}</span> tại Văn phòng Bitexco.
-            </p>
-            <button
-              className="px-10 py-3 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold rounded-full transition-colors"
-              onClick={handleReset}
-            >
+            <h2 className="text-[28px] md:text-[40px] font-bold text-on-surface mb-2">Thành công!</h2>
+            <p className="text-[15px] text-on-surface-variant mb-8 max-w-xs leading-relaxed">{successMsg}</p>
+            <button className="px-10 py-3 bg-surface-container-high text-on-surface font-bold rounded-full"
+              onClick={() => { setShowSuccess(false); router.push('/dashboard'); }}>
               Quay lại trang chủ
             </button>
           </div>
         </div>
       )}
+
+      <BottomNav />
     </div>
   );
 }
@@ -685,9 +694,7 @@ export default function AttendancePage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => { setIsMounted(true); }, []);
 
   if (!isMounted) return <div className="min-h-screen bg-background flex items-center justify-center text-on-surface">Đang tải...</div>;
 

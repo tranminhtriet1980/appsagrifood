@@ -144,6 +144,7 @@ export default function AdminEmployeesPage() {
       position: "Nhân viên",
       department: "Kinh Doanh",
       branch: "Emart Gò Vấp",
+      currentAssignedStore: "Emart Gò Vấp",
       phone: "09xxxxxxxx",
       startDate: new Date().toLocaleDateString("vi-VN"),
       contractExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("vi-VN"),
@@ -539,7 +540,7 @@ export default function AdminEmployeesPage() {
                         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-3">
                           <span className="material-symbols-outlined text-red-500">warning</span>
                           <div>
-                            <p className="text-sm font-bold text-red-500">Vượt quá giờ luật định (>48h/tuần)</p>
+                            <p className="text-sm font-bold text-red-500">Vượt quá giờ luật định (&gt;48h/tuần)</p>
                             <p className="text-xs text-red-500/80">Theo Điều 105 BLLĐ, thời giờ làm việc bình thường không quá 48 giờ trong 1 tuần.</p>
                           </div>
                         </div>
